@@ -10,6 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "https://bonddy.vercel.app",
+            "http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+
 builder.Services.AddSwaggerGen();
 
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -17,7 +29,7 @@ var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    var uri = new Uri(databaseUrl);
+    var uri = new Uri(databaseUrl   );
     var userInfo = uri.UserInfo.Split(':');
 
     var port = uri.IsDefaultPort || uri.Port <= 0 ? 5432 : uri.Port;
@@ -59,6 +71,8 @@ if (enableSwagger)
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
