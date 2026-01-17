@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using BonddyPlatform.Repositories.Implements;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Persistences;
@@ -12,8 +12,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<BonddyDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+
+    conn = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+           $"Username={userInfo[0]};Password={userInfo[1]};Ssl Mode=Require;Trust Server Certificate=true";
+}
+
+builder.Services.AddDbContext<BonddyDbContext>(opt => opt.UseNpgsql(conn));
 
 // Repositories + UoW
 builder.Services.AddScoped<IContactRepository, ContactRepository>();
@@ -27,9 +38,15 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<BonddyDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("DB migrate failed: " + ex.Message);
+    }
 }
-
 
 var enableSwagger = builder.Configuration["ENABLE_SWAGGER"] == "true"
                     || app.Environment.IsDevelopment();
