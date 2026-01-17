@@ -31,7 +31,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 
-if (app.Environment.IsDevelopment())
+var enableSwagger = builder.Configuration["ENABLE_SWAGGER"] == "true"
+                    || app.Environment.IsDevelopment();
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
