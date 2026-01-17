@@ -1,0 +1,39 @@
+# Build results
+bin/
+obj/
+*.user
+*.suo
+*.cache
+
+# Visual Studio
+.vs/
+*.log
+*.pdb
+
+# Database
+*.db
+
+# Logs
+*.log
+
+# SonarQube
+.sonarqube/
+
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
