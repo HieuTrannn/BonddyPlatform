@@ -54,7 +54,7 @@ public class AuthService : IAuthService
         return (true, null, response);
     }
 
-    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginWithFirebaseAsync(string email, string? fullName, string? redirectPath)
+    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginWithGoogleAsync(string email, string? fullName)
     {
         var user = await _uow.Users.GetByEmailAsync(email);
         if (user == null)
@@ -100,7 +100,7 @@ public class AuthService : IAuthService
             TokenType = "Bearer",
             Email = user.Email,
             FullName = user.FullName,
-            RedirectPath = redirectPath
+            Role = user.Role
         };
         return (true, "Login successful", response);
     }
