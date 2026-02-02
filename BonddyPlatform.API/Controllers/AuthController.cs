@@ -118,23 +118,22 @@ public class AuthController : ApiControllerBase
         return Success(data, message);
     }
 
-    [HttpPost("firebase-login")]
-    [SwaggerOperation(Summary = "Login with Firebase", Description = "FE sends Firebase ID token (and optional redirect path). Verifies token with Firebase Admin SDK, finds or creates user with IsEmailVerified = true, returns accessToken and refreshToken. Use redirectPath for FE to redirect after login (e.g. \"/dashboard\").")]
+    [HttpPost("login-google")]
+    [SwaggerOperation(Summary = "Login with Google", Description = "FE gửi Google ID token (sau khi đăng nhập Google, lấy credential.idToken hoặc user.getIdToken()). Backend xác thực token, tìm hoặc tạo user với IsEmailVerified = true, trả về accessToken và refreshToken.")]
     [SwaggerResponse(200, "Login successful", typeof(ApiResponse<LoginResponseDto>))]
-    [SwaggerResponse(400, "Invalid or expired Firebase token", typeof(ApiResponse))]
-    public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequestDto request)
+    [SwaggerResponse(400, "Invalid or expired Google token", typeof(ApiResponse))]
+    public async Task<IActionResult> LoginGoogle([FromBody] GoogleLoginRequestDto request)
     {
-        var firebaseUser = await _firebaseAuthService.VerifyIdTokenAsync(request.IdToken);
-        if (firebaseUser == null)
-            return BadRequest("Invalid or expired Firebase token");
+        var googleUser = await _firebaseAuthService.VerifyIdTokenAsync(request.IdToken);
+        if (googleUser == null)
+            return BadRequest("Invalid or expired Google token");
 
-        var (success, message, data) = await _authService.LoginWithFirebaseAsync(
-            firebaseUser.Email,
-            firebaseUser.DisplayName,
-            request.RedirectPath);
+        var (success, message, data) = await _authService.LoginWithGoogleAsync(
+            googleUser.Email,
+            googleUser.DisplayName);
 
         if (!success)
-            return BadRequest(message);
+            return BadRequest(message ?? "Login failed");
         return Success(data, message ?? "Login successful");
     }
 }
