@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Models;
+using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.ContactDtos;
+using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore;
 
 namespace BonddyPlatform.Services.Implements
 {
@@ -24,6 +21,52 @@ namespace BonddyPlatform.Services.Implements
         {
             var contacts = await _uow.Contacts.GetAllAsync();
             return contacts.Select(MapToDto);
+        }
+
+        public async Task<PagedResultDto<ContactResponseDto>> GetPagedAsync(ContactSearchRequestDto request)
+        {
+            // Get queryable from repository
+            var query = _uow.Contacts.GetQueryable();
+
+            // Apply search across multiple fields
+            query = query.ApplySearchByProperties(
+                request.Search,
+                nameof(Contact.Name),
+                nameof(Contact.Gmail),
+                nameof(Contact.PhoneNumber)
+            );
+
+            // Apply custom filters
+            if (request.CreatedFrom.HasValue)
+            {
+                query = query.Where(c => c.CreatedAt >= request.CreatedFrom.Value);
+            }
+
+            if (request.CreatedTo.HasValue)
+            {
+                query = query.Where(c => c.CreatedAt <= request.CreatedTo.Value);
+            }
+
+            // Get total count before paging
+            var totalCount = await query.CountAsync();
+
+            // Apply sorting (default to CreatedAt desc if not specified)
+            query = query.ApplySorting(
+                request.SortBy ?? nameof(Contact.CreatedAt),
+                request.SortOrder
+            );
+
+            // Apply paging
+            var pagedQuery = query.ApplyPaging(request.Page, request.PageSize);
+            var items = await pagedQuery.ToListAsync();
+
+            return new PagedResultDto<ContactResponseDto>
+            {
+                Items = items.Select(MapToDto),
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            };
         }
 
         public async Task<ContactResponseDto?> GetByIdAsync(int id)
