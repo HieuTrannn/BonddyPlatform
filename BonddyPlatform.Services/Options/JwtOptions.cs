@@ -1,4 +1,4 @@
-namespace BonddyPlatform.API.Options;
+namespace BonddyPlatform.Services.Options;
 
 public class JwtOptions
 {

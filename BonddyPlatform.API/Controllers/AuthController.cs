@@ -11,10 +11,12 @@ namespace BonddyPlatform.API.Controllers;
 public class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IFirebaseAuthService _firebaseAuthService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IFirebaseAuthService firebaseAuthService)
     {
         _authService = authService;
+        _firebaseAuthService = firebaseAuthService;
     }
 
     [HttpPost("login")]
@@ -114,5 +116,25 @@ public class AuthController : ApiControllerBase
         if (!success)
             return BadRequest(message);
         return Success(data, message);
+    }
+
+    [HttpPost("firebase-login")]
+    [SwaggerOperation(Summary = "Login with Firebase", Description = "FE sends Firebase ID token (and optional redirect path). Verifies token with Firebase Admin SDK, finds or creates user with IsEmailVerified = true, returns accessToken and refreshToken. Use redirectPath for FE to redirect after login (e.g. \"/dashboard\").")]
+    [SwaggerResponse(200, "Login successful", typeof(ApiResponse<LoginResponseDto>))]
+    [SwaggerResponse(400, "Invalid or expired Firebase token", typeof(ApiResponse))]
+    public async Task<IActionResult> FirebaseLogin([FromBody] FirebaseLoginRequestDto request)
+    {
+        var firebaseUser = await _firebaseAuthService.VerifyIdTokenAsync(request.IdToken);
+        if (firebaseUser == null)
+            return BadRequest("Invalid or expired Firebase token");
+
+        var (success, message, data) = await _authService.LoginWithFirebaseAsync(
+            firebaseUser.Email,
+            firebaseUser.DisplayName,
+            request.RedirectPath);
+
+        if (!success)
+            return BadRequest(message);
+        return Success(data, message ?? "Login successful");
     }
 }

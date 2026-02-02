@@ -1,11 +1,11 @@
-using BonddyPlatform.API.Options;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
-namespace BonddyPlatform.API.Services;
+namespace BonddyPlatform.Services.Implements;
 
 public class EmailSender : IEmailSender
 {
@@ -19,7 +19,7 @@ public class EmailSender : IEmailSender
     public async Task SendEmailAsync(string toEmail, string subject, string body)
     {
         if (string.IsNullOrWhiteSpace(_options.Host) || string.IsNullOrWhiteSpace(_options.UserName))
-            return; // SMTP not configured, skip sending (e.g. dev without SMTP)
+            return;
 
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(_options.FromName, _options.FromEmail));

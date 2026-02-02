@@ -2,11 +2,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using BonddyPlatform.API.Options;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
-namespace BonddyPlatform.API.Services;
+namespace BonddyPlatform.Services.Implements;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
@@ -21,10 +22,8 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateAccessToken(int userId, string email)
     {
-        var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_options.Secret));
-        var creds = new Microsoft.IdentityModel.Tokens.SigningCredentials(key,
-            Microsoft.IdentityModel.Tokens.SecurityAlgorithms.HmacSha256);
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {

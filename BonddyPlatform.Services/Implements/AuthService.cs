@@ -54,6 +54,57 @@ public class AuthService : IAuthService
         return (true, null, response);
     }
 
+    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginWithFirebaseAsync(string email, string? fullName, string? redirectPath)
+    {
+        var user = await _uow.Users.GetByEmailAsync(email);
+        if (user == null)
+        {
+            user = new User
+            {
+                Email = email,
+                FullName = fullName?.Trim() ?? email.Split('@')[0],
+                Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N")),
+                IsEmailVerified = true,
+                Role = Role.User,
+                Gender = Gender.Other
+            };
+            await _uow.Users.AddAsync(user);
+        }
+        else
+        {
+            user.IsEmailVerified = true;
+            if (!string.IsNullOrWhiteSpace(fullName))
+                user.FullName = fullName.Trim();
+            user.UpdatedAt = DateTime.UtcNow;
+            _uow.Users.Update(user);
+        }
+
+        await _uow.SaveChangesAsync();
+
+        var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshTokenValue();
+        var refreshToken = new RefreshToken
+        {
+            UserId = user.Id,
+            Token = refreshTokenValue,
+            ExpiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays)
+        };
+        await _uow.RefreshTokens.AddAsync(refreshToken);
+        await _uow.SaveChangesAsync();
+
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var response = new LoginResponseDto
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshTokenValue,
+            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
+            TokenType = "Bearer",
+            Email = user.Email,
+            FullName = user.FullName,
+            RedirectPath = redirectPath
+        };
+        return (true, "Login successful", response);
+    }
+
     public async Task<(bool Success, string? Message)> RequestOtpAsync(RequestOtpRequestDto request)
     {
         var purpose = ParseOtpPurpose(request.Purpose);
