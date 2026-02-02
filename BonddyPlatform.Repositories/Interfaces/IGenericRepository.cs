@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -9,6 +9,11 @@ namespace BonddyPlatform.Repositories.Interfaces
 {
     public interface IGenericRepository<T> where T : class
     {
+        /// <summary>
+        /// Gets queryable for advanced querying (paging, sorting, filtering)
+        /// </summary>
+        IQueryable<T> GetQueryable();
+
         Task<IEnumerable<T>> GetAllAsync();
         Task<T?> GetByIdAsync(object id);
 

@@ -1,0 +1,15 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace BonddyPlatform.Services.DTOs.AuthDtos;
+
+public class RegisterRequestDto
+{
+    [Required, EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, MinLength(6)]
+    public string Password { get; set; } = string.Empty;
+
+    [Required, MaxLength(200)]
+    public string FullName { get; set; } = string.Empty;
+}

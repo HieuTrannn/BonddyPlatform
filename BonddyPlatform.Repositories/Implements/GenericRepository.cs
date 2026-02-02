@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -20,6 +20,9 @@ namespace BonddyPlatform.Repositories.Implements
             _context = context;
             _dbSet = context.Set<T>();
         }
+
+        public IQueryable<T> GetQueryable()
+            => _dbSet.AsNoTracking();
 
         public async Task<IEnumerable<T>> GetAllAsync()
             => await _dbSet.AsNoTracking().ToListAsync();

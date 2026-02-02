@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,17 +13,32 @@ namespace BonddyPlatform.Repositories.Implements
         private readonly BonddyDbContext _context;
 
         public IContactRepository Contacts { get; }
+        public IUserRepository Users { get; }
+        public IOtpVerificationRepository OtpVerifications { get; }
+        public IRefreshTokenRepository RefreshTokens { get; }
 
-        public UnitOfWork(BonddyDbContext context, IContactRepository contactRepository)
+        public UnitOfWork(
+            BonddyDbContext context,
+            IContactRepository contactRepository,
+            IUserRepository userRepository,
+            IOtpVerificationRepository otpVerificationRepository,
+            IRefreshTokenRepository refreshTokenRepository)
         {
             _context = context;
             Contacts = contactRepository;
+            Users = userRepository;
+            OtpVerifications = otpVerificationRepository;
+            RefreshTokens = refreshTokenRepository;
         }
 
         public Task<int> SaveChangesAsync()
-            => _context.SaveChangesAsync();
+            {
+                return _context.SaveChangesAsync();
+            }
 
         public void Dispose()
-            => _context.Dispose();
+            {
+                _context.Dispose();
+            }
     }
 }
