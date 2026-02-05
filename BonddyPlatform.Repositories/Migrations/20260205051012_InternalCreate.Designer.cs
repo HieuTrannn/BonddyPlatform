@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BonddyPlatform.Repositories.Migrations
 {
     [DbContext(typeof(BonddyDbContext))]
-    [Migration("20260131023444_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260205051012_InternalCreate")]
+    partial class InternalCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -175,6 +175,9 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Property<string>("ProfilePicture")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
