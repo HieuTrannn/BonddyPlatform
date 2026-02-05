@@ -107,16 +107,35 @@ builder.Services.AddScoped<IFirebaseAuthService, FirebaseAuthService>();
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Auto migrate (Production or when enabled)
+var runMigrations =
+    app.Environment.IsProduction() ||
+    builder.Configuration["RUN_MIGRATIONS"] == "true";
+
+if (runMigrations)
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<BonddyDbContext>();
-    try
+    var logger = scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("AutoMigration");
+
+    const int maxRetries = 5;
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
     {
-        db.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("DB migrate failed: " + ex.Message);
+        try
+        {
+            logger.LogInformation("Applying migrations... attempt {Attempt}/{Max}", attempt, maxRetries);
+            await db.Database.MigrateAsync();
+            logger.LogInformation("Migrations applied successfully.");
+            break;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Migration failed (attempt {Attempt}/{Max})", attempt, maxRetries);
+            if (attempt == maxRetries) throw;
+            await Task.Delay(TimeSpan.FromSeconds(3 * attempt));
+        }
     }
 }
 
