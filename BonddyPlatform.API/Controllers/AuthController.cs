@@ -12,11 +12,13 @@ public class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IFirebaseAuthService _firebaseAuthService;
+    private readonly IUserService _userService;
 
-    public AuthController(IAuthService authService, IFirebaseAuthService firebaseAuthService)
+    public AuthController(IAuthService authService, IFirebaseAuthService firebaseAuthService, IUserService userService)
     {
         _authService = authService;
         _firebaseAuthService = firebaseAuthService;
+        _userService = userService;
     }
 
     [HttpPost("login")]
@@ -135,5 +137,21 @@ public class AuthController : ApiControllerBase
         if (!success)
             return BadRequest(message ?? "Login failed");
         return Success(data, message ?? "Login successful");
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    [SwaggerOperation(Summary = "Get current user profile", Description = "Returns the authenticated user's profile based on JWT claims.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<Services.DTOs.UserDtos.UserResponseDto>))]
+    [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
+    public Task<IActionResult> Me()
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        return ExecuteAsync(async () =>
+        {
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null) throw new KeyNotFoundException("User not found.");
+            return user;
+        });
     }
 }

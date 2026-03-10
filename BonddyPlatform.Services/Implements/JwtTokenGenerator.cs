@@ -20,7 +20,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public int AccessTokenExpirySeconds => _options.AccessTokenExpiryMinutes * 60;
 
-    public string GenerateAccessToken(int userId, string email)
+    public string GenerateAccessToken(Guid userId, string email, string role, string fullName)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -29,6 +29,8 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Email, email),
+            new Claim(ClaimTypes.Name, fullName),
+            new Claim(ClaimTypes.Role, role),
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())

@@ -80,7 +80,7 @@ public class UserService : IUserService
         };
     }
 
-    public async Task<UserResponseDto?> GetByIdAsync(int id)
+    public async Task<UserResponseDto?> GetByIdAsync(Guid id)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         return user == null ? null : MapToDto(user);
@@ -115,7 +115,7 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    public async Task<UserResponseDto> UpdateAsync(int id, UserUpdateRequestDto dto)
+    public async Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         if (user == null)
@@ -137,7 +137,7 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(Guid id)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         if (user == null)

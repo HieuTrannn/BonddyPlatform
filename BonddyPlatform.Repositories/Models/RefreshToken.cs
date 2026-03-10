@@ -4,8 +4,8 @@ namespace BonddyPlatform.Repositories.Models;
 
 public class RefreshToken
 {
-    public int Id { get; set; }
-    public int UserId { get; set; }
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
     [Required, MaxLength(500)]

@@ -16,6 +16,17 @@ namespace BonddyPlatform.Repositories.Persistences
         public DbSet<User> Users => Set<User>();
         public DbSet<OtpVerification> OtpVerifications => Set<OtpVerification>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+        public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<Guide> Guides => Set<Guide>();
+        public DbSet<Booking> Bookings => Set<Booking>();
+        public DbSet<BookingSurcharge> BookingSurcharges => Set<BookingSurcharge>();
+        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Review> Reviews => Set<Review>();
+        public DbSet<Incident> Incidents => Set<Incident>();
+        public DbSet<ChatRoom> ChatRooms => Set<ChatRoom>();
+        public DbSet<ChatRoomParticipant> ChatRoomParticipants => Set<ChatRoomParticipant>();
+        public DbSet<Message> Messages => Set<Message>();
+        public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -39,7 +50,7 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.ToTable("Users");
                 entity.HasKey(x => x.Id);
                 entity.Property(x => x.Email).HasMaxLength(255).IsRequired();
-                entity.Property(x => x.Password).HasMaxLength(500).IsRequired();    
+                entity.Property(x => x.Password).HasMaxLength(500).IsRequired();
                 entity.Property(x => x.FullName).HasMaxLength(200).IsRequired();
                 entity.Property(x => x.Gender).IsRequired();
                 entity.Property(x => x.PhoneNumber).HasMaxLength(20);
@@ -49,6 +60,155 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.Property(x => x.ProfilePicture).HasMaxLength(255);
                 entity.Property(x => x.IsEmailVerified).IsRequired();
                 entity.HasIndex(x => x.Email).IsUnique();
+            });
+
+            modelBuilder.Entity<Trip>(entity =>
+            {
+                entity.ToTable("Trips");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.City).HasMaxLength(100).IsRequired();
+                entity.Property(x => x.DurationMinutes).IsRequired();
+                entity.Property(x => x.GroupSize).IsRequired();
+                entity.Property(x => x.PreferredLanguage).HasMaxLength(10);
+                entity.Property(x => x.MeetingPoint).HasMaxLength(200);
+                entity.Property(x => x.Notes).HasMaxLength(1000);
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.TravelerUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.TravelerUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => new { x.City, x.StartTime });
+                entity.HasIndex(x => new { x.TravelerUserId, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<Guide>(entity =>
+            {
+                entity.ToTable("Guides");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+                entity.Property(x => x.Phone).HasMaxLength(20);
+                entity.Property(x => x.Email).HasMaxLength(255);
+                entity.Property(x => x.Notes).HasMaxLength(500);
+                entity.HasIndex(x => x.Email);
+            });
+
+            modelBuilder.Entity<Booking>(entity =>
+            {
+                entity.ToTable("Bookings");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.BaseRatePerHour).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.SubtotalAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.SurchargesAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.PlatformFeeAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.TipAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Trip)
+                    .WithMany()
+                    .HasForeignKey(x => x.TripId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Guide)
+                    .WithMany()
+                    .HasForeignKey(x => x.GuideId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => x.TripId);
+                entity.HasIndex(x => new { x.Status, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<BookingSurcharge>(entity =>
+            {
+                entity.ToTable("BookingSurcharges");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Type).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.Amount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Note).HasMaxLength(200);
+
+                entity.HasOne(x => x.Booking)
+                    .WithMany(b => b.Surcharges)
+                    .HasForeignKey(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.ToTable("Payments");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Amount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Method).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.ExternalRef).HasMaxLength(200);
+                entity.Property(x => x.Note).HasMaxLength(500);
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Booking)
+                    .WithOne(b => b.Payment)
+                    .HasForeignKey<Payment>(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => x.BookingId).IsUnique();
+                entity.HasIndex(x => x.Status);
+            });
+
+            modelBuilder.Entity<Review>(entity =>
+            {
+                entity.ToTable("Reviews");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Rating).IsRequired();
+                entity.Property(x => x.Comment).HasMaxLength(1000);
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Booking)
+                    .WithMany()
+                    .HasForeignKey(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ReviewerUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.ReviewerUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => x.BookingId).IsUnique();
+                entity.HasIndex(x => new { x.ReviewerUserId, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<Incident>(entity =>
+            {
+                entity.ToTable("Incidents");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Type).IsRequired();
+                entity.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.Resolution).HasMaxLength(2000);
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Booking)
+                    .WithMany()
+                    .HasForeignKey(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ReportedByUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.ReportedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new { x.BookingId, x.Status });
             });
 
             modelBuilder.Entity<OtpVerification>(entity =>
@@ -66,6 +226,104 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.Property(x => x.Token).HasMaxLength(500).IsRequired();
                 entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             });
+
+            modelBuilder.Entity<ChatRoom>(entity =>
+            {
+                entity.ToTable("ChatRooms");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.RoomType)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => x.TripId);
+                entity.HasIndex(x => new { x.RoomType, x.BuddyUserId });
+            });
+
+            modelBuilder.Entity<ChatRoomParticipant>(entity =>
+            {
+                entity.ToTable("ChatRoomParticipants");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.RoleInRoom)
+                    .IsRequired();
+
+                entity.Property(x => x.JoinedAt)
+                    .IsRequired();
+
+                entity.HasOne(x => x.Room)
+                    .WithMany(r => r.Participants)
+                    .HasForeignKey(x => x.RoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => new { x.RoomId, x.UserId }).IsUnique();
+                entity.HasIndex(x => x.UserId);
+            });
+
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.ToTable("Messages");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.ContentType)
+                    .IsRequired();
+
+                entity.Property(x => x.ContentText)
+                    .HasMaxLength(4000);
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.HasOne(x => x.Room)
+                    .WithMany(r => r.Messages)
+                    .HasForeignKey(x => x.RoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.SenderUser)
+                    .WithMany()
+                    .HasForeignKey(x => x.SenderUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.ReplyToMessage)
+                    .WithMany()
+                    .HasForeignKey(x => x.ReplyToMessageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new { x.RoomId, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<MessageAttachment>(entity =>
+            {
+                entity.ToTable("MessageAttachments");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.StoragePath)
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(x => x.ContentType)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.HasOne(x => x.Message)
+                    .WithMany(m => m.Attachments)
+                    .HasForeignKey(x => x.MessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }
+
+
+// dotnet ef migrations add AddTripEntity --project BonddyPlatform.Repositories --startup-project BonddyPlatform.API
+// dotnet ef database update --project BonddyPlatform.Repositories --startup-project BonddyPlatform.API

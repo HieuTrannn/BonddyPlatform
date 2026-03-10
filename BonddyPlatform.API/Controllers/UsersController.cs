@@ -8,6 +8,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace BonddyPlatform.API.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class UsersController : ApiControllerBase
 {
     private readonly IUserService _service;
@@ -27,7 +28,7 @@ public class UsersController : ApiControllerBase
     }
 
     [HttpGet("search")]
-    [SwaggerOperation(Summary = "Get users with paging", Description = "Returns users with search, sort, and paging. Query: Search, Page, PageSize, SortBy, SortOrder, Gender, IsEmailVerified, CreatedFrom, CreatedTo.")]
+    [SwaggerOperation(Summary = "Get users with paging", Description = "Returns users with search, sort, and paging.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<UserResponseDto>>))]
     public async Task<IActionResult> GetPaged([FromQuery] UserSearchRequestDto request)
     {
@@ -35,11 +36,11 @@ public class UsersController : ApiControllerBase
         return Success(result);
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id:guid}")]
     [SwaggerOperation(Summary = "Get user by ID", Description = "Returns a single user by ID.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     [SwaggerResponse(404, "User not found", typeof(ApiResponse))]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _service.GetByIdAsync(id);
         return result == null ? NotFound("User not found") : Success(result);
@@ -62,22 +63,20 @@ public class UsersController : ApiControllerBase
         }
     }
 
-    [HttpPut("{id:int}")]
+    [HttpPut("{id:guid}")]
     [SwaggerOperation(Summary = "Update user", Description = "Updates an existing user by ID.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     [SwaggerResponse(404, "User not found", typeof(ApiResponse))]
-    [SwaggerResponse(400, "Bad request", typeof(ApiResponse))]
-    public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequestDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UserUpdateRequestDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
         return Success(result, "User updated successfully");
     }
 
-    [HttpDelete("{id:int}")]
+    [HttpDelete("{id:guid}")]
     [SwaggerOperation(Summary = "Delete user", Description = "Deletes a user by ID.")]
     [SwaggerResponse(204, "No content")]
-    [SwaggerResponse(404, "User not found", typeof(ApiResponse))]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);
         return NoContent();

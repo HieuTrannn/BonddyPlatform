@@ -4,7 +4,7 @@ namespace BonddyPlatform.Repositories.Models;
 
 public class User
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     [Required, MaxLength(255), EmailAddress]
     public string Email { get; set; } = string.Empty;
     [Required, MaxLength(500)]
@@ -23,7 +23,7 @@ public class User
     public DateTime? UpdatedAt { get; set; }
 }
 
-public enum Gender 
+public enum Gender
 {
     Male,
     Female,
@@ -34,7 +34,7 @@ public enum Role
 {
     Admin, // Admin
     Buddy, // Buddy
-    CSKH, // Customer Service & Knowledge
+    CS, // Customer Service
     Partner, // Partner
     User // User
 }

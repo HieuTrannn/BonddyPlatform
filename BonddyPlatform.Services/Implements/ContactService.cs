@@ -69,7 +69,7 @@ namespace BonddyPlatform.Services.Implements
             };
         }
 
-        public async Task<ContactResponseDto?> GetByIdAsync(int id)
+        public async Task<ContactResponseDto?> GetByIdAsync(Guid id)
         {
             var entity = await _uow.Contacts.GetByIdAsync(id);
             return entity == null ? null : MapToDto(entity);
@@ -98,7 +98,7 @@ namespace BonddyPlatform.Services.Implements
             return MapToDto(entity);
         }
 
-        public async Task<ContactResponseDto> UpdateAsync(int id, ContactUpdateRequestDto dto)
+        public async Task<ContactResponseDto> UpdateAsync(Guid id, ContactUpdateRequestDto dto)
         {
             var entity = await _uow.Contacts.GetByIdAsync(id);
             if (entity == null) throw new KeyNotFoundException("Không tìm thấy Contact.");
@@ -122,7 +122,7 @@ namespace BonddyPlatform.Services.Implements
             return MapToDto(entity);
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(Guid id)
         {
             var entity = await _uow.Contacts.GetByIdAsync(id);
             if (entity == null) throw new KeyNotFoundException("Không tìm thấy Contact.");

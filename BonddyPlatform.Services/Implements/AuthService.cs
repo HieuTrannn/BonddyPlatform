@@ -43,11 +43,14 @@ public class AuthService : IAuthService
         await _uow.RefreshTokens.AddAsync(refreshToken);
         await _uow.SaveChangesAsync();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
             AccessToken = accessToken,
             RefreshToken = refreshTokenValue,
+            Email = user.Email,
+            FullName = user.FullName,
+            Role = user.Role,
             ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
             TokenType = "Bearer"
         };
@@ -91,7 +94,7 @@ public class AuthService : IAuthService
         await _uow.RefreshTokens.AddAsync(refreshToken);
         await _uow.SaveChangesAsync();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
             AccessToken = accessToken,
@@ -240,7 +243,7 @@ public class AuthService : IAuthService
         return (true, "Password reset successfully");
     }
 
-    public async Task<(bool Success, string? Message)> ChangePasswordAsync(int userId, ChangePasswordRequestDto request)
+    public async Task<(bool Success, string? Message)> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request)
     {
         var user = await _uow.Users.GetByIdAsync(userId);
         if (user == null)
@@ -279,11 +282,14 @@ public class AuthService : IAuthService
         await _uow.SaveChangesAsync();
 
         var user = stored.User;
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
             AccessToken = accessToken,
             RefreshToken = newRefreshTokenValue,
+            Email = user.Email,
+            FullName = user.FullName,
+            Role = user.Role,
             ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
             TokenType = "Bearer"
         };

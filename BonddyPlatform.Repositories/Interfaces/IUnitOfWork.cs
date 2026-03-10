@@ -12,6 +12,15 @@ namespace BonddyPlatform.Repositories.Interfaces
         IUserRepository Users { get; }
         IOtpVerificationRepository OtpVerifications { get; }
         IRefreshTokenRepository RefreshTokens { get; }
+        ITripRepository Trips { get; }
+        IChatRoomRepository ChatRooms { get; }
+        IChatParticipantRepository ChatParticipants { get; }
+        IMessageRepository Messages { get; }
+        IGuideRepository Guides { get; }
+        IBookingRepository Bookings { get; }
+        IPaymentRepository Payments { get; }
+        IReviewRepository Reviews { get; }
+        IIncidentRepository Incidents { get; }
         Task<int> SaveChangesAsync();
     }
 }
