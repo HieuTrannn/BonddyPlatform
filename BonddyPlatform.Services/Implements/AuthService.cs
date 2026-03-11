@@ -46,13 +46,12 @@ public class AuthService : IAuthService
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshTokenValue,
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer"
+            IsEmailVerified = user.IsEmailVerified,
+            AccessToken = accessToken,
+            RefreshToken = refreshTokenValue
         };
         return (true, null, response);
     }
@@ -97,13 +96,12 @@ public class AuthService : IAuthService
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshTokenValue,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer",
             Email = user.Email,
             FullName = user.FullName,
-            Role = user.Role
+            Role = user.Role,
+            IsEmailVerified = user.IsEmailVerified,
+            AccessToken = accessToken,
+            RefreshToken = refreshTokenValue
         };
         return (true, "Login successful", response);
     }
@@ -285,13 +283,12 @@ public class AuthService : IAuthService
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.Role.ToString(), user.FullName);
         var response = new LoginResponseDto
         {
-            AccessToken = accessToken,
-            RefreshToken = newRefreshTokenValue,
             Email = user.Email,
             FullName = user.FullName,
             Role = user.Role,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer"
+            IsEmailVerified = user.IsEmailVerified,
+            AccessToken = accessToken,
+            RefreshToken = newRefreshTokenValue
         };
         return (true, null, response);
     }
