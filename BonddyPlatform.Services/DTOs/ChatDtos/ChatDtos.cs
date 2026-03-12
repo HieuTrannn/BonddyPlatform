@@ -4,6 +4,9 @@ public class ChatRoomDto
 {
     public Guid Id { get; set; }
     public string RoomType { get; set; } = string.Empty;
+    public Guid? TripId { get; set; }
+    public Guid? TripRequestId { get; set; }
+    public Guid? BuddyUserId { get; set; }
 }
 
 public class MessageDto

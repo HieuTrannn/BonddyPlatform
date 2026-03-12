@@ -47,7 +47,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> GetUsers([FromQuery] UserSearchRequestDto request)
     {
         var result = await _userService.GetPagedAsync(request);
-        return Ok(ApiResponse<object>.SuccessResponse(result));
+        return Ok(ApiResponse<object>.SuccessResponse(result, "Users fetched successfully"));
     }
 
     [HttpGet("users/{id:guid}")]
@@ -56,7 +56,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _userService.GetByIdAsync(id);
         if (result is null) return NotFound("User not found.");
-        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User fetched successfully"));
     }
 
     [HttpPut("users/{id:guid}")]
@@ -64,7 +64,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequestDto dto)
     {
         var result = await _userService.UpdateAsync(id, dto);
-        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User updated successfully"));
     }
 
     [HttpDelete("users/{id:guid}")]
@@ -72,7 +72,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         await _userService.DeleteAsync(id);
-        return Ok(ApiResponse<object>.SuccessResponse());
+        return Ok(ApiResponse<object>.SuccessResponse("User deleted successfully"));
     }
 
     // ─── TRIPS ───────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> GetTrips([FromQuery] TripSearchRequestDto request)
     {
         var result = await _tripService.GetTripsForOpsAsync(request);
-        return Ok(ApiResponse<object>.SuccessResponse(result));
+        return Ok(ApiResponse<object>.SuccessResponse(result, "Trips fetched successfully"));
     }
 
     [HttpGet("trips/{id:guid}")]
@@ -91,7 +91,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _tripService.GetByIdAsync(id);
         if (result is null) return NotFound("Trip not found.");
-        return Ok(ApiResponse<TripResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<TripResponseDto>.SuccessResponse(result, "Trip fetched successfully"));
     }
 
     // ─── BOOKINGS ────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> GetBookingsByTrip(Guid tripId)
     {
         var result = await _bookingService.GetByTripIdAsync(tripId);
-        return Ok(ApiResponse<IEnumerable<BookingResponseDto>>.SuccessResponse(result));
+        return Ok(ApiResponse<IEnumerable<BookingResponseDto>>.SuccessResponse(result, "Bookings fetched successfully"));
     }
 
     [HttpGet("bookings/{id:guid}")]
@@ -110,7 +110,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _bookingService.GetByIdAsync(id);
         if (result is null) return NotFound("Booking not found.");
-        return Ok(ApiResponse<BookingResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BookingResponseDto>.SuccessResponse(result, "Booking fetched successfully"));
     }
 
     [HttpPatch("bookings/{id:guid}/status")]
@@ -121,7 +121,7 @@ public class AdminController : ApiControllerBase
         {
             var result = await _bookingService.UpdateStatusAsync(id, dto.Status);
             if (result is null) return NotFound("Booking not found.");
-            return Ok(ApiResponse<BookingResponseDto>.SuccessResponse(result));
+            return Ok(ApiResponse<BookingResponseDto>.SuccessResponse(result, "Booking status updated successfully"));
         }
         catch (InvalidOperationException ex)
         {
@@ -136,7 +136,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> GetBuddies()
     {
         var result = await _buddyService.GetAllAsync();
-        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result));
+        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Buddies fetched successfully"));
     }
 
     [HttpGet("buddies/{id:guid}")]
@@ -145,7 +145,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _buddyService.GetByIdAsync(id);
         if (result is null) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy fetched successfully"));
     }
 
     [HttpPost("buddies/{userId:guid}")]
@@ -154,7 +154,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _buddyService.RegisterAsync(userId, dto);
         if (result is null) return BadRequest("Failed to register buddy profile.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy registered successfully"));
     }
 
     [HttpPut("buddies/{id:guid}")]
@@ -163,7 +163,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _buddyService.UpdateAsync(id, dto);
         if (result is null) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy updated successfully"));
     }
 
     [HttpDelete("buddies/{id:guid}")]
@@ -172,7 +172,7 @@ public class AdminController : ApiControllerBase
     {
         var ok = await _buddyService.DeleteAsync(id);
         if (!ok) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<object>.SuccessResponse());
+        return Ok(ApiResponse<object>.SuccessResponse("Buddy deleted successfully"));
     }
 
     // ─── REVIEWS ─────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ public class AdminController : ApiControllerBase
     {
         var result = await _reviewService.GetByBookingIdAsync(bookingId);
         if (result is null) return NotFound("Review not found.");
-        return Ok(ApiResponse<ReviewResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<ReviewResponseDto>.SuccessResponse(result, "Review fetched successfully"));
     }
 
     // ─── INCIDENTS ───────────────────────────────────────────────────────────
@@ -193,7 +193,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> GetIncidents(Guid bookingId)
     {
         var result = await _incidentService.GetByBookingIdAsync(bookingId);
-        return Ok(ApiResponse<IEnumerable<IncidentResponseDto>>.SuccessResponse(result));
+        return Ok(ApiResponse<IEnumerable<IncidentResponseDto>>.SuccessResponse(result, "Incidents fetched successfully"));
     }
 
     [HttpPatch("incidents/{id:guid}/resolve")]
@@ -202,6 +202,6 @@ public class AdminController : ApiControllerBase
     {
         var result = await _incidentService.ResolveAsync(id, dto);
         if (result is null) return NotFound("Incident not found.");
-        return Ok(ApiResponse<IncidentResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<IncidentResponseDto>.SuccessResponse(result, "Incident resolved successfully"));
     }
 }

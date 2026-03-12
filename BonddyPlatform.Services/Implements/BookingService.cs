@@ -55,11 +55,11 @@ public class BookingService : IBookingService
 
         await _uow.Bookings.AddAsync(booking);
 
-        // Sync Trip status to InProgress when first booking is created
+        // Deactivate trip once a booking is created (no more requests accepted)
         var trip = await _uow.Trips.GetByIdAsync(dto.TripId);
-        if (trip is not null && trip.Status == TripStatus.Submitted)
+        if (trip is not null && trip.Status == TripStatus.Active)
         {
-            trip.Status = TripStatus.InProgress;
+            trip.Status = TripStatus.Deactivate;
             trip.UpdatedAt = DateTime.UtcNow;
             _uow.Trips.Update(trip);
         }
@@ -100,20 +100,20 @@ public class BookingService : IBookingService
         {
             if (newStatus == BookingStatus.Completed)
             {
-                trip.Status = TripStatus.Completed;
+                trip.Status = TripStatus.Expired;
                 trip.UpdatedAt = DateTime.UtcNow;
                 _uow.Trips.Update(trip);
             }
             else if (newStatus == BookingStatus.Cancelled)
             {
-                // Only revert Trip to Submitted if no other active bookings
+                // Reactivate trip if no other active bookings remain
                 var otherActive = (await _uow.Bookings.GetByTripIdAsync(trip.Id))
                     .Any(b => b.Id != id && b.Status is BookingStatus.Pending
                                          or BookingStatus.Confirmed
                                          or BookingStatus.InProgress);
-                if (!otherActive && trip.Status == TripStatus.InProgress)
+                if (!otherActive && trip.Status == TripStatus.Deactivate)
                 {
-                    trip.Status = TripStatus.Submitted;
+                    trip.Status = TripStatus.Active;
                     trip.UpdatedAt = DateTime.UtcNow;
                     _uow.Trips.Update(trip);
                 }

@@ -18,6 +18,7 @@ namespace BonddyPlatform.Repositories.Implements
         public IOtpVerificationRepository OtpVerifications { get; }
         public IRefreshTokenRepository RefreshTokens { get; }
         public ITripRepository Trips { get; }
+        public ITripRequestRepository TripRequests { get; }
         public IChatRoomRepository ChatRooms { get; }
         public IChatParticipantRepository ChatParticipants { get; }
         public IMessageRepository Messages { get; }
@@ -35,6 +36,7 @@ namespace BonddyPlatform.Repositories.Implements
             IOtpVerificationRepository otpVerificationRepository,
             IRefreshTokenRepository refreshTokenRepository,
             ITripRepository tripRepository,
+            ITripRequestRepository tripRequestRepository,
             IChatRoomRepository chatRoomRepository,
             IChatParticipantRepository chatParticipantRepository,
             IMessageRepository messageRepository,
@@ -51,6 +53,7 @@ namespace BonddyPlatform.Repositories.Implements
             OtpVerifications = otpVerificationRepository;
             RefreshTokens = refreshTokenRepository;
             Trips = tripRepository;
+            TripRequests = tripRequestRepository;
             ChatRooms = chatRoomRepository;
             ChatParticipants = chatParticipantRepository;
             Messages = messageRepository;

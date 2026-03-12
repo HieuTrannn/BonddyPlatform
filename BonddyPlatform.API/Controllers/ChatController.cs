@@ -26,10 +26,10 @@ public class ChatController : ApiControllerBase
     [HttpPost("trips/{tripId:guid}/room")]
     [SwaggerOperation(Summary = "Get or create trip chat room")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<ChatRoomDto>))]
-    public Task<IActionResult> GetOrCreateTripRoom(Guid tripId)
+    public async Task<IActionResult> GetOrCreateTripRoom(Guid tripId)
     {
         var userId = GetCurrentUserIdOrThrow();
-        return ExecuteAsync(() => _chatService.GetOrCreateTripRoomAsync(tripId, userId));
+        return Ok(ApiResponse<ChatRoomDto>.SuccessResponse(await _chatService.GetOrCreateTripRoomAsync(tripId, userId), "Trip chat room created successfully"));
     }
 
     /// <summary>
@@ -38,22 +38,18 @@ public class ChatController : ApiControllerBase
     [HttpGet("rooms/{roomId:guid}/messages")]
     [SwaggerOperation(Summary = "Get messages for room with paging")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<MessageDto>>))]
-    public Task<IActionResult> GetMessages(
+    public async Task<IActionResult> GetMessages(
         Guid roomId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         var userId = GetCurrentUserIdOrThrow();
-        return ExecuteAsync(async () =>
+        var isParticipant = await _chatService.IsUserInRoomAsync(roomId, userId);
+        if (!isParticipant)
         {
-            var isParticipant = await _chatService.IsUserInRoomAsync(roomId, userId);
-            if (!isParticipant)
-            {
-                throw new UnauthorizedAccessException("You are not a participant of this room.");
-            }
-
-            return await _chatService.GetMessagesAsync(roomId, page, pageSize);
-        });
+            return Unauthorized(ApiResponse.ErrorResponse("You are not a participant of this room."));
+        }
+        return Ok(ApiResponse<PagedResultDto<MessageDto>>.SuccessResponse(await _chatService.GetMessagesAsync(roomId, page, pageSize), "Messages fetched successfully"));
     }
 
     /// <summary>
@@ -62,9 +58,9 @@ public class ChatController : ApiControllerBase
     [HttpPost("rooms/{roomId:guid}/messages")]
     [SwaggerOperation(Summary = "Send message to room")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<MessageDto>))]
-    public Task<IActionResult> SendMessage(Guid roomId, [FromBody] SendMessageRequestDto request)
+    public async Task<IActionResult> SendMessage(Guid roomId, [FromBody] SendMessageRequestDto request)
     {
         var userId = GetCurrentUserIdOrThrow();
-        return ExecuteAsync(() => _chatService.SendMessageAsync(roomId, userId, request));
+        return Ok(ApiResponse<MessageDto>.SuccessResponse(await _chatService.SendMessageAsync(roomId, userId, request), "Message sent successfully"));
     }
 }

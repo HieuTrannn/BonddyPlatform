@@ -49,6 +49,47 @@ public class ChatService : IChatService
         return MapRoomToDto(room);
     }
 
+    public async Task<ChatRoomDto> GetOrCreateDirectChatAsync(Guid tripRequestId, Guid travelerUserId, Guid buddyUserId)
+    {
+        // Check if a DirectBuddy room already exists for this TripRequest
+        var existing = await _uow.ChatRooms
+            .FindAsync(r => r.RoomType == ChatRoomType.DirectBuddy && r.TripRequestId == tripRequestId);
+
+        var room = existing.FirstOrDefault();
+        if (room != null)
+            return MapRoomToDto(room);
+
+        // Create the room
+        room = new ChatRoom
+        {
+            RoomType = ChatRoomType.DirectBuddy,
+            TripRequestId = tripRequestId,
+            BuddyUserId = buddyUserId,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _uow.ChatRooms.AddAsync(room);
+        await _uow.SaveChangesAsync();
+
+        // Add both participants
+        await _uow.ChatParticipants.AddAsync(new ChatRoomParticipant
+        {
+            RoomId = room.Id,
+            UserId = travelerUserId,
+            RoleInRoom = RoomParticipantRole.Traveler,
+            JoinedAt = DateTime.UtcNow
+        });
+        await _uow.ChatParticipants.AddAsync(new ChatRoomParticipant
+        {
+            RoomId = room.Id,
+            UserId = buddyUserId,
+            RoleInRoom = RoomParticipantRole.Buddy,
+            JoinedAt = DateTime.UtcNow
+        });
+        await _uow.SaveChangesAsync();
+
+        return MapRoomToDto(room);
+    }
+
     public async Task<bool> IsUserInRoomAsync(Guid roomId, Guid userId)
     {
         return await _uow.ChatParticipants.IsUserInRoomAsync(roomId, userId);
@@ -97,7 +138,10 @@ public class ChatService : IChatService
     private static ChatRoomDto MapRoomToDto(ChatRoom room) => new()
     {
         Id = room.Id,
-        RoomType = room.RoomType.ToString()
+        RoomType = room.RoomType.ToString(),
+        TripId = room.TripId,
+        TripRequestId = room.TripRequestId,
+        BuddyUserId = room.BuddyUserId
     };
 
     private static MessageDto MapMessageToDto(Message message) => new()

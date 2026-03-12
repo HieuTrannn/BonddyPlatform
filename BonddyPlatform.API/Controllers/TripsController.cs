@@ -25,52 +25,56 @@ public class TripsController : ApiControllerBase
     [Authorize(Roles = nameof(Role.User))]
     [SwaggerOperation(Summary = "Create trip (traveler)", Description = "Traveler creates a new trip and the system auto-creates a chat room.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<TripResponseDto>))]
-    public Task<IActionResult> Create([FromBody] TripCreateRequestDto dto)
+    public async Task<IActionResult> Create([FromBody] TripCreateRequestDto dto)
     {
         var travelerUserId = GetCurrentUserIdOrThrow();
-        return ExecuteAsync(() => _tripService.CreateAsync(travelerUserId, dto));
+        return Ok(ApiResponse<TripResponseDto>.SuccessResponse(await _tripService.CreateAsync(travelerUserId, dto), "Trip created successfully"));
     }
 
     [HttpGet("my")]
     [Authorize(Roles = nameof(Role.User))]
     [SwaggerOperation(Summary = "Get my trips (traveler)", Description = "Returns trips created by the current traveler.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<TripResponseDto>>))]
-    public Task<IActionResult> GetMyTrips([FromQuery] TripSearchRequestDto request)
+    public async Task<IActionResult> GetMyTrips([FromQuery] TripSearchRequestDto request)
     {
         var travelerUserId = GetCurrentUserIdOrThrow();
-        return ExecuteAsync(() => _tripService.GetMyTripsAsync(travelerUserId, request));
+        return Ok(ApiResponse<PagedResultDto<TripResponseDto>>.SuccessResponse(await _tripService.GetMyTripsAsync(travelerUserId, request), "Trips fetched successfully"));
     }
 
     [HttpGet]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Get trips for CS/Admin", Description = "List trips with filters for CS and Admin.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<TripResponseDto>>))]
-    public Task<IActionResult> GetForOps([FromQuery] TripSearchRequestDto request)
-        => ExecuteAsync(() => _tripService.GetTripsForOpsAsync(request));
+    public async Task<IActionResult> GetForOps([FromQuery] TripSearchRequestDto request)
+        => Ok(ApiResponse<PagedResultDto<TripResponseDto>>.SuccessResponse(await _tripService.GetTripsForOpsAsync(request), "Trips fetched successfully"));
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = nameof(Role.User))]
+    [SwaggerOperation(Summary = "Update trip (traveler)", Description = "Traveler edits trip details while it is still in Submitted status.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<TripResponseDto>))]
+    public async Task<IActionResult> Update(Guid id, [FromBody] TripUpdateRequestDto dto)
+    {
+        var travelerUserId = GetCurrentUserIdOrThrow();
+        return Ok(ApiResponse<TripResponseDto>.SuccessResponse(await _tripService.UpdateAsync(id, travelerUserId, dto), "Trip updated successfully"));
+    }
+
+    [HttpGet("open")]
+    [Authorize(Roles = nameof(Role.Buddy))]
+    [SwaggerOperation(Summary = "Get open trips (buddy)", Description = "Returns Submitted trips that buddies can browse and send requests to.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<TripResponseDto>>))]
+    public async Task<IActionResult> GetOpenTrips([FromQuery] TripSearchRequestDto request)
+        => Ok(ApiResponse<PagedResultDto<TripResponseDto>>.SuccessResponse(await _tripService.GetOpenTripsForBuddyAsync(request), "Open trips fetched successfully"));
 
     [HttpGet("{id:guid}")]
     [SwaggerOperation(Summary = "Get trip by id", Description = "Traveler can access own trip, CS/Admin can access any trip.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<TripResponseDto>))]
     [SwaggerResponse(404, "Not found", typeof(ApiResponse))]
-    public Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var currentUserId = GetCurrentUserIdOrThrow();
-
-        return ExecuteAsync(async () =>
-        {
-            var trip = await _tripService.GetByIdAsync(id);
-            if (trip == null) throw new KeyNotFoundException("Trip not found.");
-
-            var isOps = User.IsInRole(nameof(Role.Admin)) || User.IsInRole(nameof(Role.CS));
-            var isTraveler = User.IsInRole(nameof(Role.User));
-
-            if (isTraveler && !isOps && trip.TravelerUserId != currentUserId)
-                throw new UnauthorizedAccessException("You are not allowed to view this trip.");
-
-            if (!isTraveler && !isOps)
-                throw new UnauthorizedAccessException("You are not allowed to view this trip.");
-
-            return trip;
-        });
+        var travelerUserId = GetCurrentUserIdOrThrow();
+        var trip = await _tripService.GetByIdAsync(id);
+        if (trip == null) return NotFound(ApiResponse.ErrorResponse("Trip not found."));
+        if (trip.TravelerUserId != travelerUserId) return Unauthorized(ApiResponse.ErrorResponse("You are not allowed to view this trip."));
+        return Ok(ApiResponse<TripResponseDto>.SuccessResponse(trip, "Trip fetched successfully"));
     }
 }

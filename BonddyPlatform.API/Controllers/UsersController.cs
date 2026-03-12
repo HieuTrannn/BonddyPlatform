@@ -27,7 +27,7 @@ public class UsersController : ApiControllerBase
     public async Task<IActionResult> GetAll()
     {
         var result = await _service.GetAllAsync();
-        return Success(result);
+        return Ok(ApiResponse<IEnumerable<UserResponseDto>>.SuccessResponse(result));
     }
 
     [HttpGet("search")]
@@ -36,7 +36,7 @@ public class UsersController : ApiControllerBase
     public async Task<IActionResult> GetPaged([FromQuery] UserSearchRequestDto request)
     {
         var result = await _service.GetPagedAsync(request);
-        return Success(result);
+        return Ok(ApiResponse<PagedResultDto<UserResponseDto>>.SuccessResponse(result));
     }
 
     [HttpGet("{id:guid}")]
@@ -46,7 +46,7 @@ public class UsersController : ApiControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _service.GetByIdAsync(id);
-        return result == null ? NotFound("User not found") : Success(result);
+        return result == null ? NotFound("User not found") : Ok(ApiResponse<UserResponseDto>.SuccessResponse(result));
     }
 
     [HttpPost]
@@ -58,11 +58,11 @@ public class UsersController : ApiControllerBase
         try
         {
             var created = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created, "User created successfully");
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, ApiResponse<UserResponseDto>.SuccessResponse(created, "User created successfully"));
         }
         catch (Exception ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(ApiResponse.ErrorResponse(ex.Message));
         }
     }
 
@@ -73,7 +73,8 @@ public class UsersController : ApiControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UserUpdateRequestDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
-        return Success(result, "User updated successfully");
+        if (result == null) return NotFound(ApiResponse.ErrorResponse("User not found"));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User updated successfully"));
     }
 
     [HttpPut("update-profile")]
@@ -85,10 +86,11 @@ public class UsersController : ApiControllerBase
     {
         var currentUserId = GetCurrentUserId();
         if (currentUserId == null)
-            return Unauthorized("User ID not found in token.");
+            return Unauthorized(ApiResponse.ErrorResponse("User ID not found in token."));
 
         var result = await _service.UpdateUserProfileAsync(currentUserId.Value, dto);
-        return Success(result, "User profile updated successfully");
+        if (result == null) return NotFound(ApiResponse.ErrorResponse("User not found"));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User profile updated successfully"));
     }
 
     [HttpPost("upload-avatar")]
@@ -100,9 +102,10 @@ public class UsersController : ApiControllerBase
     {
         var currentUserId = GetCurrentUserId();
         if (currentUserId == null)  
-            return Unauthorized("User ID not found in token.");
+            return Unauthorized(ApiResponse.ErrorResponse("User ID not found in token."));
         var result = await _service.UploadAvatarAsync(currentUserId.Value, profilePicture);
-        return Success(result, "User avatar uploaded successfully");
+        if (result == null) return NotFound(ApiResponse.ErrorResponse("User not found"));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User avatar uploaded successfully"));
     }
 
     [HttpGet("get-profile")]
@@ -114,11 +117,11 @@ public class UsersController : ApiControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null)
-            return Unauthorized("User ID not found in token.");
+            return Unauthorized(ApiResponse.ErrorResponse("User ID not found in token."));
         var user = await _service.GetByIdAsync(userId.Value);
         if (user == null)
-            return NotFound("User not found.");
-        return Success(user);
+            return NotFound(ApiResponse.ErrorResponse("User not found"));
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(user, "User profile fetched successfully"));
     }
 
     [HttpDelete("{id:guid}")]
@@ -127,6 +130,6 @@ public class UsersController : ApiControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);
-        return NoContent();
+        return Ok(ApiResponse.SuccessResponse("User deleted successfully"));
     }
 }

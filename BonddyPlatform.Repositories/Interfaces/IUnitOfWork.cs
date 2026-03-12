@@ -15,6 +15,7 @@ namespace BonddyPlatform.Repositories.Interfaces
         IOtpVerificationRepository OtpVerifications { get; }
         IRefreshTokenRepository RefreshTokens { get; }
         ITripRepository Trips { get; }
+        ITripRequestRepository TripRequests { get; }
         IChatRoomRepository ChatRooms { get; }
         IChatParticipantRepository ChatParticipants { get; }
         IMessageRepository Messages { get; }

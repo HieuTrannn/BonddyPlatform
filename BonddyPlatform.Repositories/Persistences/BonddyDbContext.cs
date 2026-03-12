@@ -14,6 +14,7 @@ namespace BonddyPlatform.Repositories.Persistences
         public DbSet<OtpVerification> OtpVerifications => Set<OtpVerification>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<Trip> Trips => Set<Trip>();
+        public DbSet<TripRequest> TripRequests => Set<TripRequest>();
         public DbSet<Buddy> Buddies => Set<Buddy>();
         public DbSet<Booking> Bookings => Set<Booking>();
         public DbSet<BookingSurcharge> BookingSurcharges => Set<BookingSurcharge>();
@@ -82,21 +83,63 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.HasKey(x => x.Id);
 
                 entity.Property(x => x.City).HasMaxLength(100).IsRequired();
-                entity.Property(x => x.DurationMinutes).IsRequired();
-                entity.Property(x => x.GroupSize).IsRequired();
-                entity.Property(x => x.PreferredLanguage).HasMaxLength(10);
-                entity.Property(x => x.MeetingPoint).HasMaxLength(200);
+                entity.Property(x => x.StartDate).HasColumnType("date").IsRequired();
+                entity.Property(x => x.StartTime).HasColumnType("time").IsRequired();
+                entity.Property(x => x.DurationHours).IsRequired();
+                entity.Property(x => x.Adults).IsRequired();
+                entity.Property(x => x.Children).IsRequired();
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.CreatedAt).IsRequired();
+
+                // List<string> PreferredLanguages stored as JSONB
+                entity.Property(x => x.PreferredLanguages)
+                    .HasConversion(
+                        v => System.Text.Json.JsonSerializer.Serialize(v ?? new List<string>(), (System.Text.Json.JsonSerializerOptions?)null),
+                        v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>()
+                    )
+                    .HasColumnType("jsonb")
+                    .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                        (a, b) => a != null && b != null && a.SequenceEqual(b),
+                        v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+                        v => v.ToList()));
 
                 entity.HasOne(x => x.TravelerUser)
                     .WithMany()
                     .HasForeignKey(x => x.TravelerUserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(x => new { x.City, x.StartTime });
+                entity.HasIndex(x => new { x.City, x.StartDate });
                 entity.HasIndex(x => new { x.TravelerUserId, x.CreatedAt });
+                entity.HasIndex(x => x.Status);
+            });
+
+            modelBuilder.Entity<TripRequest>(entity =>
+            {
+                entity.ToTable("TripRequests");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.OfferedPrice).HasColumnType("decimal(18,2)");
+                entity.Property(x => x.IsInboxOnly).IsRequired();
+                entity.Property(x => x.Note).HasMaxLength(500);
+                entity.Property(x => x.ExpiresAt).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Trip)
+                    .WithMany()
+                    .HasForeignKey(x => x.TripId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Buddy)
+                    .WithMany()
+                    .HasForeignKey(x => x.BuddyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // One buddy can only send one request per trip
+                entity.HasIndex(x => new { x.TripId, x.BuddyId }).IsUnique();
+                entity.HasIndex(x => x.TripId);
+                entity.HasIndex(x => x.BuddyId);
+                entity.HasIndex(x => x.ExpiresAt);
             });
 
             modelBuilder.Entity<Buddy>(entity =>
@@ -287,6 +330,14 @@ namespace BonddyPlatform.Repositories.Persistences
 
                 entity.HasIndex(x => x.TripId);
                 entity.HasIndex(x => new { x.RoomType, x.BuddyUserId });
+                entity.HasIndex(x => x.TripRequestId);
+
+                // Optional FK to TripRequest (only set for DirectBuddy rooms)
+                entity.HasOne(x => x.TripRequest)
+                    .WithMany()
+                    .HasForeignKey(x => x.TripRequestId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<ChatRoomParticipant>(entity =>

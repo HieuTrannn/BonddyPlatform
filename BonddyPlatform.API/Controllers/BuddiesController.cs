@@ -26,7 +26,7 @@ public class BuddiesController : ApiControllerBase
     public async Task<IActionResult> GetAllActive()
     {
         var result = await _buddyService.GetAllActiveAsync();
-        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result));
+        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Buddies fetched successfully"));
     }
 
     /// <summary>Lấy chi tiết một buddy theo BuddyId</summary>
@@ -36,7 +36,7 @@ public class BuddiesController : ApiControllerBase
     {
         var result = await _buddyService.GetByIdAsync(id);
         if (result is null) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy fetched successfully"));
     }
 
     /// <summary>Lấy buddy theo UserId</summary>
@@ -46,7 +46,7 @@ public class BuddiesController : ApiControllerBase
     {
         var result = await _buddyService.GetByUserIdAsync(userId);
         if (result is null) return NotFound("Buddy not found for this user.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy fetched successfully"));
     }
 
     // ─── BUDDY (self) ─────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ public class BuddiesController : ApiControllerBase
         var userId = GetCurrentUserIdOrThrow();
         var result = await _buddyService.GetByUserIdAsync(userId);
         if (result is null) return NotFound("Buddy profile not found for current user.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy profile updated successfully"));
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public class BuddiesController : ApiControllerBase
         var userId = GetCurrentUserIdOrThrow();
         var result = await _buddyService.UpdateSelfAsync(userId, dto);
         if (result is null) return NotFound("Buddy profile not found for current user.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy avatar uploaded successfully"));
     }
 
     /// <summary>Buddy upload/thay đổi avatar (form-data, dùng trong update profile)</summary>
@@ -89,7 +89,7 @@ public class BuddiesController : ApiControllerBase
         var userId = GetCurrentUserIdOrThrow();
         var result = await _buddyService.UploadAvatarAsync(userId, avatar);
         if (result is null) return NotFound("Buddy profile not found for current user.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy avatar uploaded successfully"));
     }
 
     // ─── ADMIN ────────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ public class BuddiesController : ApiControllerBase
         var userId = GetCurrentUserIdOrThrow();
         var result = await _buddyService.RegisterAsync(userId, dto);
         if (result is null) return BadRequest("Failed to register buddy profile.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy registered successfully"));
     }
 
     /// <summary>Admin cập nhật buddy profile theo BuddyId</summary>
@@ -114,7 +114,7 @@ public class BuddiesController : ApiControllerBase
     {
         var result = await _buddyService.UpdateAsync(id, dto);
         if (result is null) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy updated successfully"));
     }
 
     /// <summary>Admin xóa buddy profile</summary>
@@ -125,6 +125,6 @@ public class BuddiesController : ApiControllerBase
     {
         var ok = await _buddyService.DeleteAsync(id);
         if (!ok) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<object>.SuccessResponse());
+        return Ok(ApiResponse<object>.SuccessResponse("Buddy deleted successfully"));
     }
 }

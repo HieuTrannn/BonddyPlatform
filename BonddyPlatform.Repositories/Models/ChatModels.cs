@@ -18,6 +18,12 @@ public class ChatRoom
     /// </summary>
     public Guid? BuddyUserId { get; set; }
 
+    /// <summary>
+    /// Links this DirectBuddy room to the TripRequest that triggered it.
+    /// </summary>
+    public Guid? TripRequestId { get; set; }
+    public TripRequest? TripRequest { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
