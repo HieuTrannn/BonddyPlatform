@@ -94,7 +94,7 @@ public class UsersController : ApiControllerBase
     [HttpGet("get-profile")]
     [Authorize]
     [SwaggerOperation(Summary = "Get current user profile", Description = "Returns the authenticated user's profile based on JWT claims.")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<Services.DTOs.UserDtos.UserResponseDto>))]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
     public async Task<IActionResult> GetProfile()
     {

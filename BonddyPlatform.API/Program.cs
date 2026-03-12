@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json.Serialization;
+using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Repositories.Implements;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Persistences;
@@ -35,7 +37,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddCors(options =>
@@ -51,6 +57,22 @@ builder.Services.AddCors(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
+    c.MapType<Gender>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Enum = Enum.GetNames(typeof(Gender))
+            .Select(n => new Microsoft.OpenApi.Any.OpenApiString(n))
+            .Cast<Microsoft.OpenApi.Any.IOpenApiAny>()
+            .ToList()
+    });
+    c.MapType<Role>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Enum = Enum.GetNames(typeof(Role))
+            .Select(n => new Microsoft.OpenApi.Any.OpenApiString(n))
+            .Cast<Microsoft.OpenApi.Any.IOpenApiAny>()
+            .ToList()
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
