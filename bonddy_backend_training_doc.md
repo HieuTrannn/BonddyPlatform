@@ -35,11 +35,14 @@ Tài liệu ưu tiên **tính thực thi**: mô tả *domain*, *workflow runtime
 - **AI Recommendations/Matching**: gợi ý top buddy phù hợp + “book now”
 
 ### 1.2 Actors & Roles
-- **Traveler**: tạo trip, chat, thanh toán, review
-- **CS (Customer Service / Ops)**: tiếp nhận trip, tư vấn, gán guide/buddy, tạo booking thủ công, xử lý sự cố, hỗ trợ escrow/release
+- **User (Traveler)**: tạo trip, chat, thanh toán, review
+- **CS (Customer Service / Ops)**: tiếp nhận trip, tư vấn, gán buddy, tạo booking thủ công, xử lý sự cố, hỗ trợ escrow/release
 - **Admin**: quản trị hệ thống, RBAC, cấu hình, audit
-- **Buddy** (Phase 2): nhận request, accept/decline, dẫn trip
+- **Buddy** (Phase 2): nhận request, accept/decline, dẫn trip. Khi user đăng ký làm buddy, họ vẫn giữ role `User` và được cấp thêm role `Buddy`.
 - **Partner** (Phase 2+): referral/QR, voucher/offers, reporting (growth & supply)
+
+> **Lưu ý RBAC**: Một user có thể có nhiều role cùng lúc (lưu trong bảng `user_roles`).  
+> Ví dụ: user trở thành buddy → `user_roles` sẽ có 2 bản ghi: `User` + `Buddy`.
 
 ---
 
@@ -165,10 +168,12 @@ Khi đó booking vẫn hợp lệ và review vẫn gắn với “guide entity�
 
 ### 7.1 Bảng & mục đích
 #### A) Users & RBAC
-- `users`: thông tin user cơ bản
-- `user_roles`: gán nhiều role cho 1 user (ví dụ user có thể vừa CS vừa Partner nếu cần)
-- `traveler_profiles`: mở rộng traveler
-- `buddy_profiles`: mở rộng buddy (rating, active_mode, base_rate)
+- `users`: thông tin user cơ bản (không còn cột `role` trực tiếp)
+- `user_roles`: bảng gán nhiều role cho 1 user. Mỗi bản ghi gồm `UserId`, `Role` (enum), `AssignedAt`. Unique index trên `(UserId, Role)`.
+  - Khi đăng ký: tạo 1 bản ghi `User`
+  - Khi trở thành Buddy: thêm bản ghi `Buddy` (giữ nguyên `User`)
+- `traveler_profiles`: mở rộng traveler (Phase 2)
+- `buddies`: thay thế `buddy_profiles`, FK tới `users`. Chứa `Activities` (JSONB), `CostPerHour`, `Rate`, `Languages` (JSONB), `Bio`, `IsActive`
 
 #### B) Preferences/Tags
 - `tags`: danh mục sở thích/vibe/avoid...
@@ -200,9 +205,9 @@ Khi đó booking vẫn hợp lệ và review vẫn gắn với “guide entity�
 - `vouchers`: voucher/offers
 
 ### 7.2 Quan hệ chính (ERD in words)
-- `users (1) --- (n) user_roles`
-- `users (1) --- (1) traveler_profiles` (optional)
-- `users (1) --- (1) buddy_profiles` (optional)
+- `users (1) --- (n) user_roles` ← **multi-role**: 1 user có thể có nhiều role
+- `users (1) --- (1) traveler_profiles` (optional, Phase 2)
+- `users (1) --- (1) buddies` (optional — được tạo khi user đăng ký làm Buddy)
 - `users (1) --- (n) user_tags --- (n) tags`
 - `users (traveler) (1) --- (n) trips`
 - `trips (1) --- (1) chat_rooms`
@@ -286,13 +291,20 @@ Khi đó booking vẫn hợp lệ và review vẫn gắn với “guide entity�
 
 ## 9) Security & Access Control (RBAC)
 ### 9.1 Permissions (high-level)
-- Traveler: CRUD own trip, read own booking/payment/review, chat in own rooms
-- CS: read all trips, join rooms, create bookings, update statuses, manage incidents, moderate reviews
-- Admin: all permissions + manage roles/config
-- Buddy (Phase 2): read assigned requests/bookings, accept/decline, chat in related rooms
-- Partner: manage referrals/vouchers, view own stats (limited scope)
+- **User (Traveler)**: CRUD own trip, read own booking/payment/review, chat in own rooms
+- **CS**: read all trips, join rooms, create bookings, update statuses, manage incidents, moderate reviews
+- **Admin**: all permissions + manage roles/config
+- **Buddy** (Phase 2): read assigned requests/bookings, accept/decline, chat in related rooms. Khi là Buddy, user có 2 role (`User` + `Buddy`) nên vẫn dùng được các tính năng Traveler.
+- **Partner**: manage referrals/vouchers, view own stats (limited scope)
 
-### 9.2 Audit logging (khuyến nghị)
+### 9.2 Multi-role JWT
+JWT chứa nhiều `ClaimTypes.Role` (1 claim mỗi role). Ví dụ Buddy sẽ có:
+```
+"role": ["User", "Buddy"]
+```
+`[Authorize(Roles = "Buddy")]` hoặc `User.IsInRole("Buddy")` hoạt động natively với multiple role claims.
+
+### 9.3 Audit logging (khuyến nghị)
 Log các hành động quan trọng:
 - CS tạo booking, sửa giá, mark completed, release escrow
 - Admin thay đổi role/config

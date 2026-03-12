@@ -15,16 +15,16 @@ public class UserRepository : IUserRepository
     }
 
     public IQueryable<User> GetQueryable()
-        => _context.Users.AsNoTracking();
+        => _context.Users.Include(u => u.Roles).AsNoTracking();
 
     public async Task<IEnumerable<User>> GetAllAsync()
-        => await _context.Users.AsNoTracking().ToListAsync();
+        => await _context.Users.Include(u => u.Roles).AsNoTracking().ToListAsync();
 
     public async Task<User?> GetByEmailAsync(string email)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        => await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == email);
 
     public async Task<User?> GetByIdAsync(Guid id)
-        => await _context.Users.FindAsync(id);
+        => await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == id);
 
     public async Task AddAsync(User user)
         => await _context.Users.AddAsync(user);

@@ -31,13 +31,13 @@ public abstract class ApiControllerBase : ControllerBase
     /// Returns a 201 Created response with location header
     /// </summary>
     protected IActionResult CreatedAtAction<T>(string actionName, object routeValues, T? data = default, string? message = null)
-        => CreatedAtAction(actionName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
+        => base.CreatedAtAction(actionName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
 
     /// <summary>
     /// Returns a 201 Created response with location header (route name)
     /// </summary>
     protected IActionResult CreatedAtRoute<T>(string routeName, object routeValues, T? data = default, string? message = null)
-        => CreatedAtRoute(routeName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
+        => base.CreatedAtRoute(routeName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
 
     /// <summary>
     /// Returns a 204 No Content response

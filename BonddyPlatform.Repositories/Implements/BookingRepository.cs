@@ -14,14 +14,14 @@ public class BookingRepository : GenericRepository<Booking>, IBookingRepository
     public async Task<Booking?> GetByIdWithDetailsAsync(Guid id)
         => await _context.Bookings
             .Include(b => b.Trip)
-            .Include(b => b.Guide)
+            .Include(b => b.Buddy).ThenInclude(bp => bp.User)
             .Include(b => b.CreatedByUser)
             .Include(b => b.Surcharges)
             .FirstOrDefaultAsync(b => b.Id == id);
 
     public async Task<IEnumerable<Booking>> GetByTripIdAsync(Guid tripId)
         => await _context.Bookings
-            .Include(b => b.Guide)
+            .Include(b => b.Buddy).ThenInclude(bp => bp.User)
             .Include(b => b.Surcharges)
             .Where(b => b.TripId == tripId)
             .OrderByDescending(b => b.CreatedAt)

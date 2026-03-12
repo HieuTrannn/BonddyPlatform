@@ -7,7 +7,6 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace BonddyPlatform.API.Controllers;
 
-[Authorize(Roles = "Admin,CS")]
 [Route("api/[controller]")]
 [ApiController]
 public class BookingsController : ApiControllerBase

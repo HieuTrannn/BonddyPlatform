@@ -11,7 +11,6 @@ public class User
     public string Password { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public Gender Gender { get; set; }
-    public Role Role { get; set; }
     public string? PhoneNumber { get; set; } = string.Empty;
     public string? Address { get; set; } = string.Empty;
     public DateTime? DateOfBirth { get; set; }
@@ -20,6 +19,9 @@ public class User
     public bool IsEmailVerified { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>All roles assigned to this user.</summary>
+    public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 }
 
 public enum Gender
@@ -31,8 +33,8 @@ public enum Gender
 
 public enum Role
 {
-    Admin, // Admin
-    Buddy, // Buddy
-    CS, // Customer Service
-    User // User
+    Admin,  // Platform administrator
+    Buddy,  // Local buddy/guide
+    CS,     // Customer Service
+    User    // Regular traveler
 }

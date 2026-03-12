@@ -14,6 +14,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly JwtOptions _options;
     private readonly ILogger<JwtTokenGenerator> _logger;
+
     public JwtTokenGenerator(IOptions<JwtOptions> options, ILogger<JwtTokenGenerator> logger)
     {
         _options = options.Value;
@@ -22,22 +23,27 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public int AccessTokenExpirySeconds => _options.AccessTokenExpiryMinutes * 60;
 
-    public string GenerateAccessToken(Guid userId, string email, string role, string fullName)
+    public string GenerateAccessToken(Guid userId, string email, IEnumerable<string> roles, string fullName)
     {
         try
         {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Name, fullName),
+                new Claim(ClaimTypes.Email, email),
+            };
+
+            // Add one ClaimTypes.Role per role so [Authorize(Roles="Buddy")] works natively
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Name, fullName.ToString()),
-                new Claim(ClaimTypes.Email, email.ToString()),
-                new Claim(ClaimTypes.Role, role.ToString()),
-            }),
+                Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddMinutes(_options.AccessTokenExpiryMinutes),
                 Issuer = _options.Issuer,
                 Audience = _options.Audience,
@@ -53,7 +59,6 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             throw new InvalidOperationException("Error generating access token", ex);
         }
     }
-
 
     public string GenerateRefreshTokenValue()
     {

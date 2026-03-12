@@ -55,18 +55,16 @@ public class TripsController : ApiControllerBase
     public Task<IActionResult> GetById(Guid id)
     {
         var currentUserId = GetCurrentUserIdOrThrow();
-        var currentRole = GetClaimValue(System.Security.Claims.ClaimTypes.Role);
 
         return ExecuteAsync(async () =>
         {
             var trip = await _tripService.GetByIdAsync(id);
             if (trip == null) throw new KeyNotFoundException("Trip not found.");
 
-            var isTraveler = string.Equals(currentRole, nameof(Role.User), StringComparison.OrdinalIgnoreCase);
-            var isOps = string.Equals(currentRole, nameof(Role.Admin), StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(currentRole, nameof(Role.CS), StringComparison.OrdinalIgnoreCase);
+            var isOps = User.IsInRole(nameof(Role.Admin)) || User.IsInRole(nameof(Role.CS));
+            var isTraveler = User.IsInRole(nameof(Role.User));
 
-            if (isTraveler && trip.TravelerUserId != currentUserId)
+            if (isTraveler && !isOps && trip.TravelerUserId != currentUserId)
                 throw new UnauthorizedAccessException("You are not allowed to view this trip.");
 
             if (!isTraveler && !isOps)

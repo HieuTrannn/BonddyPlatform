@@ -1,6 +1,6 @@
 using BonddyPlatform.API.Common;
 using BonddyPlatform.Services.DTOs.BookingDtos;
-using BonddyPlatform.Services.DTOs.GuideDtos;
+using BonddyPlatform.Services.DTOs.BuddyDtos;
 using BonddyPlatform.Services.DTOs.IncidentDtos;
 using BonddyPlatform.Services.DTOs.ReviewDtos;
 using BonddyPlatform.Services.DTOs.TripDtos;
@@ -20,7 +20,7 @@ public class AdminController : ApiControllerBase
     private readonly IUserService _userService;
     private readonly ITripService _tripService;
     private readonly IBookingService _bookingService;
-    private readonly IGuideService _guideService;
+    private readonly IBuddyService _buddyService;
     private readonly IReviewService _reviewService;
     private readonly IIncidentService _incidentService;
 
@@ -28,14 +28,14 @@ public class AdminController : ApiControllerBase
         IUserService userService,
         ITripService tripService,
         IBookingService bookingService,
-        IGuideService guideService,
+        IBuddyService buddyService,
         IReviewService reviewService,
         IIncidentService incidentService)
     {
         _userService = userService;
         _tripService = tripService;
         _bookingService = bookingService;
-        _guideService = guideService;
+        _buddyService = buddyService;
         _reviewService = reviewService;
         _incidentService = incidentService;
     }
@@ -129,49 +129,49 @@ public class AdminController : ApiControllerBase
         }
     }
 
-    // ─── GUIDES ──────────────────────────────────────────────────────────────
+    // ─── BUDDIES ─────────────────────────────────────────────────────────────
 
-    [HttpGet("guides")]
-    [SwaggerOperation(Summary = "Admin: lấy danh sách guides")]
-    public async Task<IActionResult> GetGuides()
+    [HttpGet("buddies")]
+    [SwaggerOperation(Summary = "Admin: lấy toàn bộ danh sách buddies")]
+    public async Task<IActionResult> GetBuddies()
     {
-        var result = await _guideService.GetAllAsync();
-        return Ok(ApiResponse<IEnumerable<GuideResponseDto>>.SuccessResponse(result));
+        var result = await _buddyService.GetAllAsync();
+        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result));
     }
 
-    [HttpGet("guides/{id:guid}")]
-    [SwaggerOperation(Summary = "Admin: lấy chi tiết một guide")]
-    public async Task<IActionResult> GetGuide(Guid id)
+    [HttpGet("buddies/{id:guid}")]
+    [SwaggerOperation(Summary = "Admin: lấy chi tiết một buddy")]
+    public async Task<IActionResult> GetBuddy(Guid id)
     {
-        var result = await _guideService.GetByIdAsync(id);
-        if (result is null) return NotFound("Guide not found.");
-        return Ok(ApiResponse<GuideResponseDto>.SuccessResponse(result));
+        var result = await _buddyService.GetByIdAsync(id);
+        if (result is null) return NotFound("Buddy not found.");
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
+    }
+    
+    [HttpPost("buddies")]
+    [SwaggerOperation(Summary = "Admin: đăng ký buddy profile mới cho một user")]
+    public async Task<IActionResult> RegisterBuddy([FromBody] BuddyRegisterRequestDto dto)
+    {
+        var result = await _buddyService.RegisterAsync(dto);
+        if (result is null) return BadRequest("Failed to register buddy profile.");
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
     }
 
-    [HttpPost("guides")]
-    [SwaggerOperation(Summary = "Admin: tạo guide mới")]
-    public async Task<IActionResult> CreateGuide([FromBody] GuideCreateRequestDto dto)
+    [HttpPut("buddies/{id:guid}")]
+    [SwaggerOperation(Summary = "Admin: cập nhật buddy")]
+    public async Task<IActionResult> UpdateBuddy(Guid id, [FromBody] BuddyUpdateRequestDto dto)
     {
-        var result = await _guideService.CreateAsync(dto);
-        return CreatedAtAction(nameof(GetGuide), new { id = result.Id },
-            ApiResponse<GuideResponseDto>.SuccessResponse(result));
+        var result = await _buddyService.UpdateAsync(id, dto);
+        if (result is null) return NotFound("Buddy not found.");
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
     }
 
-    [HttpPut("guides/{id:guid}")]
-    [SwaggerOperation(Summary = "Admin: cập nhật guide")]
-    public async Task<IActionResult> UpdateGuide(Guid id, [FromBody] GuideUpdateRequestDto dto)
+    [HttpDelete("buddies/{id:guid}")]
+    [SwaggerOperation(Summary = "Admin: xóa buddy")]
+    public async Task<IActionResult> DeleteBuddy(Guid id)
     {
-        var result = await _guideService.UpdateAsync(id, dto);
-        if (result is null) return NotFound("Guide not found.");
-        return Ok(ApiResponse<GuideResponseDto>.SuccessResponse(result));
-    }
-
-    [HttpDelete("guides/{id:guid}")]
-    [SwaggerOperation(Summary = "Admin: xóa guide")]
-    public async Task<IActionResult> DeleteGuide(Guid id)
-    {
-        var ok = await _guideService.DeleteAsync(id);
-        if (!ok) return NotFound("Guide not found.");
+        var ok = await _buddyService.DeleteAsync(id);
+        if (!ok) return NotFound("Buddy not found.");
         return Ok(ApiResponse<object>.SuccessResponse());
     }
 

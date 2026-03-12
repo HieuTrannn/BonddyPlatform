@@ -8,6 +8,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace BonddyPlatform.API.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
@@ -46,7 +47,7 @@ public class AuthController : ApiControllerBase
     }
 
     [HttpPost("verify-otp")]
-    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password.")]
+    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password. Purpose: \"Register\" or \"ForgotPassword\".")]
     [SwaggerResponse(200, "OTP verified", typeof(ApiResponse))]
     [SwaggerResponse(400, "Invalid or expired OTP", typeof(ApiResponse))]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)

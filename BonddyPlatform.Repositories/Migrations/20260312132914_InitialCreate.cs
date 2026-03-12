@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace BonddyPlatform.Repositories.Migrations
 {
     /// <inheritdoc />
@@ -43,23 +45,6 @@ namespace BonddyPlatform.Repositories.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Guides",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    IsInternal = table.Column<bool>(type: "boolean", nullable: false),
-                    Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Guides", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "OtpVerifications",
                 columns: table => new
                 {
@@ -85,7 +70,6 @@ namespace BonddyPlatform.Repositories.Migrations
                     Password = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Gender = table.Column<int>(type: "integer", nullable: false),
-                    Role = table.Column<int>(type: "integer", nullable: false),
                     PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     Address = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "date", nullable: true),
@@ -98,6 +82,32 @@ namespace BonddyPlatform.Repositories.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Buddies",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Activities = table.Column<string>(type: "jsonb", nullable: false),
+                    CostPerHour = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    Rate = table.Column<decimal>(type: "numeric(3,2)", nullable: false),
+                    Languages = table.Column<string>(type: "jsonb", nullable: false),
+                    Bio = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Buddies", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Buddies_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -217,6 +227,26 @@ namespace BonddyPlatform.Repositories.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserRoles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Role = table.Column<int>(type: "integer", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRoles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserRoles_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MessageAttachments",
                 columns: table => new
                 {
@@ -244,7 +274,7 @@ namespace BonddyPlatform.Repositories.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TripId = table.Column<Guid>(type: "uuid", nullable: false),
-                    GuideId = table.Column<Guid>(type: "uuid", nullable: false),
+                    BuddyId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     BaseRatePerHour = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     DurationMinutes = table.Column<int>(type: "integer", nullable: false),
@@ -262,9 +292,9 @@ namespace BonddyPlatform.Repositories.Migrations
                 {
                     table.PrimaryKey("PK_Bookings", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Bookings_Guides_GuideId",
-                        column: x => x.GuideId,
-                        principalTable: "Guides",
+                        name: "FK_Bookings_Buddies_BuddyId",
+                        column: x => x.BuddyId,
+                        principalTable: "Buddies",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -391,15 +421,31 @@ namespace BonddyPlatform.Repositories.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "Address", "CreatedAt", "DateOfBirth", "Email", "FullName", "Gender", "IsEmailVerified", "Password", "PhoneNumber", "ProfilePicture", "UpdatedAt", "aboutMe" },
+                values: new object[] { new Guid("00000000-0000-0000-0000-000000000001"), "", new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), null, "admin@bonddy.com", "Bonddy Admin", 2, true, "$2a$11$4utbNwmPKUJywWue101YXe7l0StEL09.KPQdV04hADeCAswcd7QFq", "", "", null, "" });
+
+            migrationBuilder.InsertData(
+                table: "UserRoles",
+                columns: new[] { "Id", "AssignedAt", "Role", "UserId" },
+                values: new object[,]
+                {
+                    { new Guid("00000000-0000-0000-0001-000000000001"), new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 0, new Guid("00000000-0000-0000-0000-000000000001") },
+                    { new Guid("00000000-0000-0000-0001-000000000002"), new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 1, new Guid("00000000-0000-0000-0000-000000000001") },
+                    { new Guid("00000000-0000-0000-0001-000000000003"), new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 2, new Guid("00000000-0000-0000-0000-000000000001") },
+                    { new Guid("00000000-0000-0000-0001-000000000004"), new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 3, new Guid("00000000-0000-0000-0000-000000000001") }
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Bookings_BuddyId",
+                table: "Bookings",
+                column: "BuddyId");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Bookings_CreatedByUserId",
                 table: "Bookings",
                 column: "CreatedByUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Bookings_GuideId",
-                table: "Bookings",
-                column: "GuideId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Bookings_Status_CreatedAt",
@@ -415,6 +461,17 @@ namespace BonddyPlatform.Repositories.Migrations
                 name: "IX_BookingSurcharges_BookingId",
                 table: "BookingSurcharges",
                 column: "BookingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Buddies_IsActive",
+                table: "Buddies",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Buddies_UserId",
+                table: "Buddies",
+                column: "UserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatRoomParticipants_RoomId_UserId",
@@ -448,11 +505,6 @@ namespace BonddyPlatform.Repositories.Migrations
                 table: "Contacts",
                 column: "PhoneNumber",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Guides_Email",
-                table: "Guides",
-                column: "Email");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Incidents_BookingId_Status",
@@ -522,6 +574,17 @@ namespace BonddyPlatform.Repositories.Migrations
                 columns: new[] { "TravelerUserId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_UserId",
+                table: "UserRoles",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_UserId_Role",
+                table: "UserRoles",
+                columns: new[] { "UserId", "Role" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
                 table: "Users",
                 column: "Email",
@@ -559,6 +622,9 @@ namespace BonddyPlatform.Repositories.Migrations
                 name: "Reviews");
 
             migrationBuilder.DropTable(
+                name: "UserRoles");
+
+            migrationBuilder.DropTable(
                 name: "Messages");
 
             migrationBuilder.DropTable(
@@ -568,7 +634,7 @@ namespace BonddyPlatform.Repositories.Migrations
                 name: "ChatRooms");
 
             migrationBuilder.DropTable(
-                name: "Guides");
+                name: "Buddies");
 
             migrationBuilder.DropTable(
                 name: "Trips");

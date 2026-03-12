@@ -7,8 +7,8 @@ public class Booking
     public Guid TripId { get; set; }
     public Trip Trip { get; set; } = null!;
 
-    public Guid GuideId { get; set; }
-    public Guide Guide { get; set; } = null!;
+    public Guid BuddyId { get; set; }
+    public Buddy Buddy { get; set; } = null!;
 
     /// <summary>CS/Admin tạo booking</summary>
     public Guid CreatedByUserId { get; set; }

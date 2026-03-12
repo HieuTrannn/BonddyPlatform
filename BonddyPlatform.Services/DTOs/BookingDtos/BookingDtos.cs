@@ -12,7 +12,7 @@ public class BookingSurchargeRequestDto
 public class BookingCreateRequestDto
 {
     public Guid TripId { get; set; }
-    public Guid GuideId { get; set; }
+    public Guid BuddyId { get; set; }
     public decimal BaseRatePerHour { get; set; }
     public int DurationMinutes { get; set; }
     public decimal PlatformFeeAmount { get; set; }
@@ -39,8 +39,8 @@ public class BookingResponseDto
     public Guid Id { get; set; }
     public Guid TripId { get; set; }
     public string TripCity { get; set; } = string.Empty;
-    public Guid GuideId { get; set; }
-    public string GuideName { get; set; } = string.Empty;
+    public Guid BuddyId { get; set; }
+    public string BuddyName { get; set; } = string.Empty;
     public Guid CreatedByUserId { get; set; }
     public string CreatedByUserName { get; set; } = string.Empty;
 

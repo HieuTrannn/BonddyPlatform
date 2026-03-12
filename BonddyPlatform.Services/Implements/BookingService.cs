@@ -33,7 +33,7 @@ public class BookingService : IBookingService
         var booking = new Booking
         {
             TripId = dto.TripId,
-            GuideId = dto.GuideId,
+            BuddyId = dto.BuddyId,
             CreatedByUserId = createdByUserId,
             BaseRatePerHour = dto.BaseRatePerHour,
             DurationMinutes = dto.DurationMinutes,
@@ -130,8 +130,8 @@ public class BookingService : IBookingService
         Id = b.Id,
         TripId = b.TripId,
         TripCity = b.Trip?.City ?? string.Empty,
-        GuideId = b.GuideId,
-        GuideName = b.Guide?.FullName ?? string.Empty,
+        BuddyId = b.BuddyId,
+        BuddyName = b.Buddy?.User?.FullName ?? string.Empty,
         CreatedByUserId = b.CreatedByUserId,
         CreatedByUserName = b.CreatedByUser?.FullName ?? string.Empty,
         BaseRatePerHour = b.BaseRatePerHour,

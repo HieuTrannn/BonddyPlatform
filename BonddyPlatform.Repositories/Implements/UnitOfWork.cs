@@ -14,13 +14,14 @@ namespace BonddyPlatform.Repositories.Implements
 
         public IContactRepository Contacts { get; }
         public IUserRepository Users { get; }
+        public IUserRoleRepository UserRoles { get; }
         public IOtpVerificationRepository OtpVerifications { get; }
         public IRefreshTokenRepository RefreshTokens { get; }
         public ITripRepository Trips { get; }
         public IChatRoomRepository ChatRooms { get; }
         public IChatParticipantRepository ChatParticipants { get; }
         public IMessageRepository Messages { get; }
-        public IGuideRepository Guides { get; }
+        public IBuddyRepository Buddies { get; }
         public IBookingRepository Bookings { get; }
         public IPaymentRepository Payments { get; }
         public IReviewRepository Reviews { get; }
@@ -30,13 +31,14 @@ namespace BonddyPlatform.Repositories.Implements
             BonddyDbContext context,
             IContactRepository contactRepository,
             IUserRepository userRepository,
+            IUserRoleRepository userRoleRepository,
             IOtpVerificationRepository otpVerificationRepository,
             IRefreshTokenRepository refreshTokenRepository,
             ITripRepository tripRepository,
             IChatRoomRepository chatRoomRepository,
             IChatParticipantRepository chatParticipantRepository,
             IMessageRepository messageRepository,
-            IGuideRepository guideRepository,
+            IBuddyRepository buddyRepository,
             IBookingRepository bookingRepository,
             IPaymentRepository paymentRepository,
             IReviewRepository reviewRepository,
@@ -45,13 +47,14 @@ namespace BonddyPlatform.Repositories.Implements
             _context = context;
             Contacts = contactRepository;
             Users = userRepository;
+            UserRoles = userRoleRepository;
             OtpVerifications = otpVerificationRepository;
             RefreshTokens = refreshTokenRepository;
             Trips = tripRepository;
             ChatRooms = chatRoomRepository;
             ChatParticipants = chatParticipantRepository;
             Messages = messageRepository;
-            Guides = guideRepository;
+            Buddies = buddyRepository;
             Bookings = bookingRepository;
             Payments = paymentRepository;
             Reviews = reviewRepository;
