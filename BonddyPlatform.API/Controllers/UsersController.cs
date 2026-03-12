@@ -76,7 +76,7 @@ public class UsersController : ApiControllerBase
         return Success(result, "User updated successfully");
     }
 
-    [HttpPut("user-profile")]
+    [HttpPut("update-profile")]
     [Authorize]
     [SwaggerOperation(Summary = "Update user profile", Description = "Updates an existing user profile.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
@@ -89,6 +89,22 @@ public class UsersController : ApiControllerBase
 
         var result = await _service.UpdateUserProfileAsync(currentUserId.Value, dto, profilePicture);
         return Success(result, "User profile updated successfully");
+    }
+
+    [HttpGet("get-profile")]
+    [Authorize]
+    [SwaggerOperation(Summary = "Get current user profile", Description = "Returns the authenticated user's profile based on JWT claims.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<Services.DTOs.UserDtos.UserResponseDto>))]
+    [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
+    public async Task<IActionResult> GetProfile()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return Unauthorized("User ID not found in token.");
+        var user = await _service.GetByIdAsync(userId.Value);
+        if (user == null)
+            return NotFound("User not found.");
+        return Success(user);
     }
 
     [HttpDelete("{id:guid}")]
