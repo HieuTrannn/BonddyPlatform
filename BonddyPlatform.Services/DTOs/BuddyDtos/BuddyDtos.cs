@@ -5,8 +5,6 @@ namespace BonddyPlatform.Services.DTOs.BuddyDtos;
 /// <summary>Used by Admin/CS to create a Buddy profile for an existing User.</summary>
 public class BuddyRegisterRequestDto
 {
-    /// <summary>The UserId of the user who will become a buddy.</summary>
-    public Guid UserId { get; set; }
     public List<BuddyActivity> Activities { get; set; } = new();
     public decimal CostPerHour { get; set; }
     public List<string> Languages { get; set; } = new();
@@ -31,6 +29,7 @@ public class BuddySelfUpdateRequestDto
 {
     // ── User fields ──────────────────────────────────────────────────────────
     public string? FullName { get; set; }
+    public Gender? Gender { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Address { get; set; }
     public DateTime? DateOfBirth { get; set; }
@@ -51,7 +50,11 @@ public class BuddyResponseDto
     public Guid UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public Gender Gender { get; set; }
     public string? PhoneNumber { get; set; }
+    public string? Address { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public string? AboutMe { get; set; }
     public string? ProfilePicture { get; set; }
 
     // ── Buddy info ────────────────────────────────────────────────────────────

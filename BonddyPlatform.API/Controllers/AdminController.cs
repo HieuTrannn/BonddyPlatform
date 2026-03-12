@@ -147,12 +147,12 @@ public class AdminController : ApiControllerBase
         if (result is null) return NotFound("Buddy not found.");
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
     }
-    
-    [HttpPost("buddies")]
+
+    [HttpPost("buddies/{userId:guid}")]
     [SwaggerOperation(Summary = "Admin: đăng ký buddy profile mới cho một user")]
-    public async Task<IActionResult> RegisterBuddy([FromBody] BuddyRegisterRequestDto dto)
+    public async Task<IActionResult> RegisterBuddy(Guid userId, [FromBody] BuddyRegisterRequestDto dto)
     {
-        var result = await _buddyService.RegisterAsync(dto);
+        var result = await _buddyService.RegisterAsync(userId, dto);
         if (result is null) return BadRequest("Failed to register buddy profile.");
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
     }

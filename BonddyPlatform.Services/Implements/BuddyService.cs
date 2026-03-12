@@ -17,19 +17,19 @@ public class BuddyService : IBuddyService
         _firebaseService = firebaseService;
     }
 
-    public async Task<BuddyResponseDto> RegisterAsync(BuddyRegisterRequestDto dto)
+    public async Task<BuddyResponseDto> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto)
     {
-        var existing = await _uow.Buddies.GetByUserIdAsync(dto.UserId);
+        var existing = await _uow.Buddies.GetByUserIdAsync(userId);
         if (existing is not null)
             throw new InvalidOperationException("This user already has a Buddy profile.");
 
-        var user = await _uow.Users.GetByIdAsync(dto.UserId);
+        var user = await _uow.Users.GetByIdAsync(userId);
         if (user is null)
             throw new KeyNotFoundException("User not found for creating Buddy profile.");
 
         var buddy = new Buddy
         {
-            UserId = dto.UserId,
+            UserId = userId,
             Activities = dto.Activities,
             CostPerHour = dto.CostPerHour,
             Languages = dto.Languages,
@@ -42,8 +42,8 @@ public class BuddyService : IBuddyService
         await _uow.Buddies.AddAsync(buddy);
 
         // Add Buddy role if user doesn't already have it (user keeps existing roles too)
-        if (!await _uow.UserRoles.HasRoleAsync(dto.UserId, Role.Buddy))
-            await _uow.UserRoles.AddAsync(new UserRole { UserId = dto.UserId, Role = Role.Buddy });
+        if (!await _uow.UserRoles.HasRoleAsync(userId, Role.Buddy))
+            await _uow.UserRoles.AddAsync(new UserRole { UserId = userId, Role = Role.Buddy });
 
         await _uow.SaveChangesAsync();
 
@@ -102,6 +102,7 @@ public class BuddyService : IBuddyService
 
         // ── Update User fields ────────────────────────────────────────────────
         if (dto.FullName != null) user.FullName = dto.FullName.Trim();
+        if (dto.Gender.HasValue) user.Gender = dto.Gender.Value;
         if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber.Trim();
         if (dto.Address != null) user.Address = dto.Address.Trim();
         if (dto.DateOfBirth.HasValue) user.DateOfBirth = dto.DateOfBirth;
@@ -160,6 +161,10 @@ public class BuddyService : IBuddyService
         FullName = b.User?.FullName ?? string.Empty,
         Email = b.User?.Email ?? string.Empty,
         PhoneNumber = b.User?.PhoneNumber,
+        Gender = b.User?.Gender ?? Gender.Other,
+        Address = b.User?.Address,
+        DateOfBirth = b.User?.DateOfBirth ?? DateTime.MinValue,
+        AboutMe = b.User?.aboutMe,
         ProfilePicture = b.User?.ProfilePicture,
         Activities = b.Activities,
         CostPerHour = b.CostPerHour,

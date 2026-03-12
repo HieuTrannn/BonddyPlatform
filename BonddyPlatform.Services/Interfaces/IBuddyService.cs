@@ -5,7 +5,7 @@ namespace BonddyPlatform.Services.Interfaces;
 
 public interface IBuddyService
 {
-    Task<BuddyResponseDto> RegisterAsync(BuddyRegisterRequestDto dto);
+    Task<BuddyResponseDto> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto);
     Task<BuddyResponseDto?> GetByIdAsync(Guid id);
     Task<BuddyResponseDto?> GetByUserIdAsync(Guid userId);
     Task<IEnumerable<BuddyResponseDto>> GetAllActiveAsync();

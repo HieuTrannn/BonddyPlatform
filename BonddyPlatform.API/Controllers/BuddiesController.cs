@@ -95,12 +95,13 @@ public class BuddiesController : ApiControllerBase
     // ─── ADMIN ────────────────────────────────────────────────────────────────
 
     /// <summary>User đăng ký làm buddy</summary>
-    [Authorize]
-    [HttpPost("register")]
+    [Authorize(Roles = "User")]
+    [HttpPost("register-as-buddy")]
     [SwaggerOperation(Summary = "User đăng ký làm buddy")]
-    public async Task<IActionResult> Register([FromBody] BuddyRegisterRequestDto dto)
+    public async Task<IActionResult> RegisterAsBuddy([FromBody] BuddyRegisterRequestDto dto)
     {
-        var result = await _buddyService.RegisterAsync(dto);
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _buddyService.RegisterAsync(userId, dto);
         if (result is null) return BadRequest("Failed to register buddy profile.");
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result));
     }
