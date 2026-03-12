@@ -9,7 +9,6 @@ public class User
     public string Email { get; set; } = string.Empty;
     [Required, MaxLength(500)]
     public string Password { get; set; } = string.Empty;
-    [Required, MaxLength(200)]
     public string FullName { get; set; } = string.Empty;
     public Gender Gender { get; set; }
     public Role Role { get; set; }
@@ -35,6 +34,5 @@ public enum Role
     Admin, // Admin
     Buddy, // Buddy
     CS, // Customer Service
-    Partner, // Partner
     User // User
 }

@@ -1,7 +1,10 @@
+using System.Security.Claims;
 using BonddyPlatform.API.Common;
 using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.UserDtos;
 using BonddyPlatform.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -71,6 +74,21 @@ public class UsersController : ApiControllerBase
     {
         var result = await _service.UpdateAsync(id, dto);
         return Success(result, "User updated successfully");
+    }
+
+    [HttpPut("user-profile")]
+    [Authorize]
+    [SwaggerOperation(Summary = "Update user profile", Description = "Updates an existing user profile.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
+    [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
+    public async Task<IActionResult> UpdateUserProfile([FromForm] UserUpdateRequestDto dto, IFormFile? profilePicture)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null)
+            return Unauthorized("User ID not found in token.");
+
+        var result = await _service.UpdateUserProfileAsync(currentUserId.Value, dto, profilePicture);
+        return Success(result, "User profile updated successfully");
     }
 
     [HttpDelete("{id:guid}")]

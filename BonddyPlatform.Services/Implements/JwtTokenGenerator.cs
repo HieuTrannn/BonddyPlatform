@@ -6,42 +6,54 @@ using BonddyPlatform.Services.Interfaces;
 using BonddyPlatform.Services.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 
 namespace BonddyPlatform.Services.Implements;
 
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly JwtOptions _options;
-
-    public JwtTokenGenerator(IOptions<JwtOptions> options)
+    private readonly ILogger<JwtTokenGenerator> _logger;
+    public JwtTokenGenerator(IOptions<JwtOptions> options, ILogger<JwtTokenGenerator> logger)
     {
         _options = options.Value;
+        _logger = logger;
     }
 
     public int AccessTokenExpirySeconds => _options.AccessTokenExpiryMinutes * 60;
 
     public string GenerateAccessToken(Guid userId, string email, string role, string fullName)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
+        try
         {
-            new Claim("userId", userId.ToString()),
-            new Claim("fullName", fullName),
-            new Claim("email", email),
-            new Claim("role", role),
-        };
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+                new Claim(ClaimTypes.Name, fullName.ToString()),
+                new Claim(ClaimTypes.Email, email.ToString()),
+                new Claim(ClaimTypes.Role, role.ToString()),
+            }),
+                Expires = DateTime.UtcNow.AddMinutes(_options.AccessTokenExpiryMinutes),
+                Issuer = _options.Issuer,
+                Audience = _options.Audience,
+                SigningCredentials = creds
+            };
 
-        var token = new JwtSecurityToken(
-            issuer: _options.Issuer,
-            audience: _options.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_options.AccessTokenExpiryMinutes),
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating access token");
+            throw new InvalidOperationException("Error generating access token", ex);
+        }
     }
+
 
     public string GenerateRefreshTokenValue()
     {

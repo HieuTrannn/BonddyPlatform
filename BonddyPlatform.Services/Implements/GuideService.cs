@@ -25,7 +25,7 @@ public class GuideService : IGuideService
             Notes = dto.Notes,
             CreatedAt = DateTime.UtcNow
         };
-
+        
         await _uow.Guides.AddAsync(guide);
         await _uow.SaveChangesAsync();
         return ToDto(guide);

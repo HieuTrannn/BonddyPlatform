@@ -1,5 +1,6 @@
 using BonddyPlatform.Services.DTOs.UserDtos;
 using BonddyPlatform.Services.DTOs.Common;
+using Microsoft.AspNetCore.Http;
 
 namespace BonddyPlatform.Services.Interfaces;
 
@@ -10,5 +11,6 @@ public interface IUserService
     Task<UserResponseDto?> GetByIdAsync(Guid id);
     Task<UserResponseDto> CreateAsync(UserCreateRequestDto dto);
     Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto);
+    Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto, IFormFile? profilePicture);
     Task DeleteAsync(Guid id);
 }

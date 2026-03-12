@@ -2,6 +2,7 @@ using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Services.DTOs.AuthDtos;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -139,7 +140,14 @@ public class AuthService : IAuthService
         var subject = purpose == OtpPurpose.Register
             ? "Verify your email - Bonddy Platform"
             : "Reset your password - Bonddy Platform";
-        var body = $"<p>Your verification code is: <strong>{otpCode}</strong></p><p>Valid for {OtpExpiryMinutes} minutes.</p>";
+        var purposeTitle = purpose == OtpPurpose.Register
+            ? "Xác thực email"
+            : "Đặt lại mật khẩu";
+        var body = EmailTemplates.BuildOtpEmailHtml(
+            otpCode: otpCode,
+            expiresInMinutes: OtpExpiryMinutes,
+            purposeTitle: purposeTitle,
+            recipientName: null);
         await _emailSender.SendEmailAsync(request.Email, subject, body);
 
         return (true, "OTP has been sent to your email.");
@@ -204,10 +212,14 @@ public class AuthService : IAuthService
         await _uow.SaveChangesAsync();
 
         var subject = "Verify your email - Bonddy Platform";
-        var body = $"<p>Welcome, {request.FullName}!</p><p>Your verification code is: <strong>{otpCode}</strong></p><p>Valid for {OtpExpiryMinutes} minutes. Use the Verify OTP API to verify your account.</p>";
+        var body = EmailTemplates.BuildOtpEmailHtml(
+            otpCode: otpCode,
+            expiresInMinutes: OtpExpiryMinutes,
+            purposeTitle: "Xác thực email",
+            recipientName: request.FullName);
         await _emailSender.SendEmailAsync(request.Email, subject, body);
 
-        return (true, "Registration successful. Check your email for the verification OTP, then call Verify OTP to verify your account.");
+        return (true, "Registration successful. Check your email for the verification OTP");
     }
 
     public async Task<(bool Success, string? Message)> ForgotPasswordAsync(ForgotPasswordRequestDto request)

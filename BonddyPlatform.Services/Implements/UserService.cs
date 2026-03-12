@@ -5,16 +5,21 @@ using BonddyPlatform.Services.DTOs.UserDtos;
 using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace BonddyPlatform.Services.Implements;
 
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _uow;
-
-    public UserService(IUnitOfWork uow)
+    private readonly FirebaseService _firebaseService;
+    private readonly ILogger<UserService> _logger;
+    public UserService(IUnitOfWork uow, FirebaseService firebaseService, ILogger<UserService> logger)
     {
         _uow = uow;
+        _firebaseService = firebaseService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
@@ -99,12 +104,10 @@ public class UserService : IUserService
             Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             FullName = dto.FullName.Trim(),
             Gender = dto.Gender,
-            Role = dto.Role,
             PhoneNumber = dto.PhoneNumber?.Trim(),
             Address = dto.Address?.Trim(),
             DateOfBirth = dto.DateOfBirth,
             aboutMe = dto.AboutMe?.Trim(),
-            ProfilePicture = dto.ProfilePicture?.Trim(),
             IsEmailVerified = false,
             CreatedAt = DateTime.UtcNow
         };
@@ -115,26 +118,86 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    public async Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto)
+    public Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto)
+        => UpdateUserProfileAsync(id, dto, null);
+
+    public async Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto, IFormFile? profilePicture)
     {
-        var user = await _uow.Users.GetByIdAsync(id);
-        if (user == null)
+        var userExist = await _uow.Users.GetByIdAsync(id);
+        if (userExist == null)
+        {
             throw new KeyNotFoundException("Không tìm thấy User.");
+        }
 
-        user.FullName = dto.FullName.Trim();
-        user.Gender = dto.Gender;
-        user.Role = dto.Role;
-        user.PhoneNumber = dto.PhoneNumber?.Trim();
-        user.Address = dto.Address?.Trim();
-        user.DateOfBirth = dto.DateOfBirth;
-        user.aboutMe = dto.AboutMe?.Trim();
-        user.ProfilePicture = dto.ProfilePicture?.Trim();
-        user.UpdatedAt = DateTime.UtcNow;
+        bool isUpdated = false;
 
-        _uow.Users.Update(user);
-        await _uow.SaveChangesAsync();
+        if (dto.FullName != userExist.FullName && dto.FullName != null)
+        {
+            userExist.FullName = dto.FullName.Trim();
+            isUpdated = true;
+        }
 
-        return MapToDto(user);
+        if (dto.Gender != userExist.Gender && dto.Gender != null)
+        {
+            userExist.Gender = dto.Gender.Value;
+            isUpdated = true;
+        }
+        if (dto.PhoneNumber != userExist.PhoneNumber && dto.PhoneNumber != null)
+        {
+            userExist.PhoneNumber = dto.PhoneNumber?.Trim();
+            isUpdated = true;
+        }
+        if (dto.Address != userExist.Address && dto.Address != null)
+        {
+        userExist.Address = dto.Address?.Trim();
+            isUpdated = true;
+        }
+        if (dto.DateOfBirth != userExist.DateOfBirth && dto.DateOfBirth != null)
+        {
+            userExist.DateOfBirth = dto.DateOfBirth;
+            isUpdated = true;
+        }
+        if (dto.AboutMe != userExist.aboutMe && dto.AboutMe != null)
+        {
+            userExist.aboutMe = dto.AboutMe?.Trim();
+            isUpdated = true;
+        }
+
+        if (profilePicture != null)
+        {
+            if (profilePicture.Length > 10 * 1024 * 1024) // 10MB
+            {
+                throw new InvalidOperationException("Kích thước ảnh vượt quá 10MB.");
+            }
+            var profilePictureUrl = await _firebaseService.UploadAvatarAsync(profilePicture.OpenReadStream(), profilePicture.FileName);
+            userExist.ProfilePicture = profilePictureUrl;
+            isUpdated = true;
+        }
+
+        if (isUpdated)
+        {
+            userExist.UpdatedAt = DateTime.UtcNow;
+            _uow.Users.Update(userExist);
+            await _uow.SaveChangesAsync();
+            var userUpdateResponse = new UserResponseDto 
+            {
+                Id = userExist.Id,
+                Email = userExist.Email,
+                FullName = userExist.FullName,
+                Gender = userExist.Gender,
+                PhoneNumber = userExist.PhoneNumber,
+                Address = userExist.Address,
+                DateOfBirth = userExist.DateOfBirth,
+                AboutMe = userExist.aboutMe,
+                ProfilePicture = userExist.ProfilePicture,
+                IsEmailVerified = userExist.IsEmailVerified,
+                CreatedAt = userExist.CreatedAt,
+                UpdatedAt = userExist.UpdatedAt
+            };
+            return userUpdateResponse;
+        }
+        _logger.LogWarning("Không có thay đổi nào được thực hiện.");
+        throw new InvalidOperationException("Không có thay đổi nào được thực hiện.");
     }
 
     public async Task DeleteAsync(Guid id)
@@ -153,7 +216,6 @@ public class UserService : IUserService
         Email = user.Email,
         FullName = user.FullName,
         Gender = user.Gender,
-        Role = user.Role,
         PhoneNumber = user.PhoneNumber,
         Address = user.Address,
         DateOfBirth = user.DateOfBirth,

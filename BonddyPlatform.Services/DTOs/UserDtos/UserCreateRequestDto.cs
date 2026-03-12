@@ -27,7 +27,4 @@ public class UserCreateRequestDto
 
     [MaxLength(1000)]
     public string? AboutMe { get; set; }
-
-    [MaxLength(500)]
-    public string? ProfilePicture { get; set; }
 }
