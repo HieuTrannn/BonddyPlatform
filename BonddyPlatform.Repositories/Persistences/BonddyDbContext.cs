@@ -113,10 +113,10 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.Property(x => x.Activities)
                     .HasConversion(
                         v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                        v => System.Text.Json.JsonSerializer.Deserialize<List<BuddyActivity>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<BuddyActivity>()
+                        v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>()
                     )
                     .HasColumnType("jsonb")
-                    .Metadata.SetValueComparer(new ValueComparer<List<BuddyActivity>>(
+                    .Metadata.SetValueComparer(new ValueComparer<List<string>>(
                         (a, b) => a != null && b != null && a.SequenceEqual(b),
                         v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
                         v => v.ToList()));

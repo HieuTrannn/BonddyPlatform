@@ -5,7 +5,7 @@ namespace BonddyPlatform.Services.DTOs.BuddyDtos;
 /// <summary>Used by Admin/CS to create a Buddy profile for an existing User.</summary>
 public class BuddyRegisterRequestDto
 {
-    public List<BuddyActivity> Activities { get; set; } = new();
+    public List<string> Activities { get; set; } = new();
     public decimal CostPerHour { get; set; }
     public List<string> Languages { get; set; } = new();
     public string Bio { get; set; } = string.Empty;
@@ -14,7 +14,7 @@ public class BuddyRegisterRequestDto
 /// <summary>Used by Admin to update only buddy-specific fields.</summary>
 public class BuddyUpdateRequestDto
 {
-    public List<BuddyActivity>? Activities { get; set; }
+    public List<string>? Activities { get; set; }
     public decimal? CostPerHour { get; set; }
     public List<string>? Languages { get; set; }
     public string? Bio { get; set; }
@@ -36,7 +36,7 @@ public class BuddySelfUpdateRequestDto
     public string? AboutMe { get; set; }
 
     // ── Buddy fields ─────────────────────────────────────────────────────────
-    public List<BuddyActivity>? Activities { get; set; }
+    public List<string>? Activities { get; set; }
     public decimal? CostPerHour { get; set; }
     public List<string>? Languages { get; set; }
     public string? Bio { get; set; }
@@ -58,7 +58,7 @@ public class BuddyResponseDto
     public string? ProfilePicture { get; set; }
 
     // ── Buddy info ────────────────────────────────────────────────────────────
-    public List<BuddyActivity> Activities { get; set; } = new();
+    public List<string> Activities { get; set; } = new();
     public decimal CostPerHour { get; set; }
     public decimal Rate { get; set; }
     public List<string> Languages { get; set; } = new();

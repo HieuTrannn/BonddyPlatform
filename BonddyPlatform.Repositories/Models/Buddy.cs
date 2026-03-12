@@ -15,7 +15,7 @@ public class Buddy
     public User User { get; set; } = null!;
 
     /// <summary>Activities the buddy specialises in (stored as JSON)</summary>
-    public List<BuddyActivity> Activities { get; set; } = new();
+    public List<string> Activities { get; set; } = new();
 
     /// <summary>Rate charged per hour (in USD)</summary>
     public decimal CostPerHour { get; set; }
@@ -34,18 +34,4 @@ public class Buddy
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
-}
-
-public enum BuddyActivity
-{
-    Shopping = 0,
-    NightlifeAndBars = 1,
-    ArtAndMuseums = 2,
-    ExplorationAndSightseeing = 3,
-    FoodAndDining = 4,
-    Sports = 5,
-    Photography = 6,
-    Music = 7,
-    LocalExperience = 8,
-    NatureAndOutdoors = 9
 }

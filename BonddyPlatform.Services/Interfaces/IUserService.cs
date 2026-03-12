@@ -11,6 +11,7 @@ public interface IUserService
     Task<UserResponseDto?> GetByIdAsync(Guid id);
     Task<UserResponseDto> CreateAsync(UserCreateRequestDto dto);
     Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto);
-    Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto, IFormFile? profilePicture);
+    Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto);
+    Task<UserResponseDto?> UploadAvatarAsync(Guid id, IFormFile profilePicture);
     Task DeleteAsync(Guid id);
 }

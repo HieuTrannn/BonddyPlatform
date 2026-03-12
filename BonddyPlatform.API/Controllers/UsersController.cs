@@ -81,14 +81,28 @@ public class UsersController : ApiControllerBase
     [SwaggerOperation(Summary = "Update user profile", Description = "Updates an existing user profile.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
-    public async Task<IActionResult> UpdateUserProfile([FromForm] UserUpdateRequestDto dto, IFormFile? profilePicture)
+    public async Task<IActionResult> UpdateUserProfile(UserUpdateRequestDto dto)
     {
         var currentUserId = GetCurrentUserId();
         if (currentUserId == null)
             return Unauthorized("User ID not found in token.");
 
-        var result = await _service.UpdateUserProfileAsync(currentUserId.Value, dto, profilePicture);
+        var result = await _service.UpdateUserProfileAsync(currentUserId.Value, dto);
         return Success(result, "User profile updated successfully");
+    }
+
+    [HttpPost("upload-avatar")]
+    [Authorize]
+    [SwaggerOperation(Summary = "Upload user avatar", Description = "Uploads a user avatar.")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
+    [SwaggerResponse(401, "Unauthorized", typeof(ApiResponse))]
+    public async Task<IActionResult> UploadAvatar(IFormFile profilePicture)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null)  
+            return Unauthorized("User ID not found in token.");
+        var result = await _service.UploadAvatarAsync(currentUserId.Value, profilePicture);
+        return Success(result, "User avatar uploaded successfully");
     }
 
     [HttpGet("get-profile")]

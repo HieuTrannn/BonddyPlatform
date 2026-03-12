@@ -55,8 +55,6 @@ namespace BonddyPlatform.Services.Implements
 
         public async Task<string> UploadAvatarAsync(Stream imageStream, string fileName)
         {
-
-
             try
             {
                 var uniqueFileName = $"{Guid.NewGuid()}_{fileName}";
@@ -78,7 +76,6 @@ namespace BonddyPlatform.Services.Implements
                     imageStream
                 );
 
-
                 storageObject.Acl = new[] { new Google.Apis.Storage.v1.Data.ObjectAccessControl
                     {
                         Entity = "allUsers",
@@ -87,7 +84,6 @@ namespace BonddyPlatform.Services.Implements
                 };
 
                 await _storageClient.UpdateObjectAsync(storageObject);
-
 
                 return $"https://storage.googleapis.com/{BucketName}/avatars/{uniqueFileName}";
             }

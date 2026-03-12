@@ -130,7 +130,7 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    public async Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto, IFormFile? profilePicture)
+    public async Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         if (user == null)
@@ -145,14 +145,6 @@ public class UserService : IUserService
         if (dto.DateOfBirth.HasValue && dto.DateOfBirth != user.DateOfBirth) { user.DateOfBirth = dto.DateOfBirth; isUpdated = true; }
         if (dto.AboutMe != null && dto.AboutMe != user.aboutMe) { user.aboutMe = dto.AboutMe.Trim(); isUpdated = true; }
 
-        if (profilePicture != null)
-        {
-            if (profilePicture.Length > 10 * 1024 * 1024)
-                throw new InvalidOperationException("Kích thước ảnh vượt quá 10MB.");
-            user.ProfilePicture = await _firebaseService.UploadAvatarAsync(profilePicture.OpenReadStream(), profilePicture.FileName);
-            isUpdated = true;
-        }
-
         if (!isUpdated)
         {
             _logger.LogWarning("Không có thay đổi nào được thực hiện.");
@@ -163,6 +155,21 @@ public class UserService : IUserService
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
+        return MapToDto(user);
+    }
+
+    public async Task<UserResponseDto?> UploadAvatarAsync(Guid id, IFormFile profilePicture)
+    {
+        var user = await _uow.Users.GetByIdAsync(id);
+        if (user == null) return null;
+
+        if (profilePicture.Length > 10 * 1024 * 1024)
+            throw new InvalidOperationException("Kích thước ảnh vượt quá 10MB.");
+            
+        user.ProfilePicture = await _firebaseService.UploadAvatarAsync(profilePicture.OpenReadStream(), profilePicture.FileName);
+        user.UpdatedAt = DateTime.UtcNow;
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
         return MapToDto(user);
     }
 
