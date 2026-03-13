@@ -164,6 +164,17 @@ public abstract class ApiControllerBase : ControllerBase
     }
 
     /// <summary>
+    /// Gets the current user full name from claims
+    /// </summary>
+    protected string? GetCurrentUserFullName()
+    {
+        var fullNameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
+        if (string.IsNullOrEmpty(fullNameClaim))
+            return null;
+        return fullNameClaim;
+    }
+
+    /// <summary>
     /// Gets the current user ID from claims or throws Unauthorized
     /// </summary>
     protected Guid GetCurrentUserIdOrThrow()

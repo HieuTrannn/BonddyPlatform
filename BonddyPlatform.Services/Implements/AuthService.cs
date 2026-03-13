@@ -159,21 +159,23 @@ public class AuthService : IAuthService
         return (true, "OTP has been sent to your email.");
     }
 
-    public async Task<(bool Success, string? Message)> VerifyOtpAsync(VerifyOtpRequestDto request)
+    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> VerifyOtpAsync(VerifyOtpRequestDto request)
     {
         var purpose = ParseOtpPurpose(request.Purpose);
         if (purpose == null)
-            return (false, "Invalid purpose");
+            return (false, "Invalid purpose", null);
 
         var otp = await _uow.OtpVerifications.GetLatestValidAsync(request.Email, purpose.Value);
         if (otp == null)
-            return (false, "Invalid or expired OTP");
+            return (false, "Invalid or expired OTP", null);
 
         if (otp.OtpCode != request.OtpCode.Trim())
-            return (false, "Invalid OTP code");
+            return (false, "Invalid OTP code", null);
 
         otp.IsUsed = true;
         _uow.OtpVerifications.Update(otp);
+
+        LoginResponseDto? loginData = null;
 
         if (purpose == OtpPurpose.Register)
         {
@@ -183,13 +185,40 @@ public class AuthService : IAuthService
                 user.IsEmailVerified = true;
                 user.UpdatedAt = DateTime.UtcNow;
                 _uow.Users.Update(user);
+
+                var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshTokenValue();
+                var refreshToken = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshTokenValue,
+                    ExpiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays)
+                };
+                await _uow.RefreshTokens.AddAsync(refreshToken);
+
+                var roles = user.Roles.Select(r => r.Role.ToString()).ToList();
+                var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, roles, user.FullName);
+
+                loginData = new LoginResponseDto
+                {
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    Roles = user.Roles.Select(r => r.Role).ToList(),
+                    IsEmailVerified = user.IsEmailVerified,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshTokenValue
+                };
+            }
+            else
+            {
+                return (false, "User not found for this email", null);
             }
         }
 
         await _uow.SaveChangesAsync();
-        return (true, purpose == OtpPurpose.Register
-            ? "Account verified successfully. You can now log in."
-            : "OTP verified successfully.");
+        var message = purpose == OtpPurpose.Register
+            ? "Account verified successfully."
+            : "OTP verified successfully.";
+        return (true, message, loginData);
     }
 
     public async Task<(bool Success, string? Message)> RegisterAsync(RegisterRequestDto request)

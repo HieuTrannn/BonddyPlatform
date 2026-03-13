@@ -45,15 +45,16 @@ public class AuthController : ApiControllerBase
     }
 
     [HttpPost("verify-otp")]
-    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password. Purpose: \"Register\" or \"ForgotPassword\".")]
-    [SwaggerResponse(200, "OTP verified", typeof(ApiResponse))]
+    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password. Purpose: \"Register\" or \"ForgotPassword\". For Register, returns LoginResponseDto (auto login).")]
+    [SwaggerResponse(200, "OTP verified", typeof(ApiResponse<LoginResponseDto>))]
     [SwaggerResponse(400, "Invalid or expired OTP", typeof(ApiResponse))]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
     {
         var result = await _authService.VerifyOtpAsync(request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Invalid or expired OTP"));
-        return Ok(ApiResponse.SuccessResponse("OTP verified"));
+        var message = result.Message ?? "OTP verified";
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, message));
     }
 
     [HttpPost("register")]
