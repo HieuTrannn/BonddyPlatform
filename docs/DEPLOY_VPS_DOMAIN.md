@@ -252,16 +252,76 @@ sudo apt install nginx -y
 sudo apt install certbot python3-certbot-nginx -y
 ```
 
-### 5.3 Cấu hình Nginx và lấy SSL
+### 5.3 Tạo file cấu hình Nginx
 
-- Tạo file cấu hình cho **bonddy.vn** và **api.bonddy.vn** (proxy pass đến cổng chạy API, ví dụ 5000).
-- Chạy:
+Trên VPS, tạo file cấu hình cho **api.bonddy.vn** (proxy về API port 8080) và **bonddy.vn** / **www.bonddy.vn**.
+
+**Cách 1 – Dùng file mẫu trong repo**
+
+Trong thư mục `~/BonddyPlatform` (sau khi clone/pull):
+
+```bash
+sudo cp docs/nginx-bonddy.conf.example /etc/nginx/sites-available/bonddy.vn
+```
+
+**Cách 2 – Tạo file bằng tay**
+
+```bash
+sudo nano /etc/nginx/sites-available/bonddy.vn
+```
+
+Dán nội dung sau (API chạy port **8080**):
+
+```nginx
+server {
+    listen 80;
+    server_name api.bonddy.vn;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /hubs/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+server {
+    listen 80;
+    server_name bonddy.vn www.bonddy.vn;
+    root /var/www/html;
+    index index.html;
+    location / { try_files $uri $uri/ /index.html; }
+}
+```
+
+Lưu file (nano: Ctrl+O, Enter, Ctrl+X).
+
+**Bật site và kiểm tra:**
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/bonddy.vn /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+`nginx -t` phải báo "syntax is ok". Nếu có site mặc định conflict (default), có thể xóa: `sudo rm /etc/nginx/sites-enabled/default`.
+
+### 5.4 Lấy SSL (Certbot)
 
 ```bash
 sudo certbot --nginx -d bonddy.vn -d www.bonddy.vn -d api.bonddy.vn
 ```
 
-Làm theo hướng dẫn (email, đồng ý điều khoản). Certbot sẽ tự cấu hình SSL trong Nginx.
+Làm theo hướng dẫn (email, đồng ý điều khoản). Certbot sẽ tự chỉnh file Nginx để dùng HTTPS.
 
 ---
 
