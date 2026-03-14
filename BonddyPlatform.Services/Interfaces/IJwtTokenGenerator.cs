@@ -2,7 +2,7 @@ namespace BonddyPlatform.Services.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    string GenerateAccessToken(int userId, string email);
+    string GenerateAccessToken(Guid userId, string email, IEnumerable<string> roles, string fullName);
     string GenerateRefreshTokenValue();
     int AccessTokenExpirySeconds { get; }
 }

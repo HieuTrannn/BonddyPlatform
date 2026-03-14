@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json.Serialization;
+using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Repositories.Implements;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Persistences;
@@ -8,6 +10,7 @@ using BonddyPlatform.Services.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using BonddyPlatform.API.Hubs;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +37,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddCors(options =>
@@ -50,12 +57,30 @@ builder.Services.AddCors(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
+    c.MapType<Gender>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Enum = Enum.GetNames(typeof(Gender))
+            .Select(n => new Microsoft.OpenApi.Any.OpenApiString(n))
+            .Cast<Microsoft.OpenApi.Any.IOpenApiAny>()
+            .ToList()
+    });
+    c.MapType<Role>(() => new OpenApiSchema
+    {
+        Type = "string",
+        Enum = Enum.GetNames(typeof(Role))
+            .Select(n => new Microsoft.OpenApi.Any.OpenApiString(n))
+            .Cast<Microsoft.OpenApi.Any.IOpenApiAny>()
+            .ToList()
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization: Bearer {token}",
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -93,17 +118,38 @@ builder.Services.AddDbContext<BonddyDbContext>(opt => opt.UseNpgsql(conn));
 // Repositories + UoW
 builder.Services.AddScoped<IContactRepository, ContactRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddScoped<IOtpVerificationRepository, OtpVerificationRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<ITripRepository, TripRepository>();
+builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
+builder.Services.AddScoped<IChatRoomRepository, ChatRoomRepository>();
+builder.Services.AddScoped<IChatParticipantRepository, ChatParticipantRepository>();
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IBuddyRepository, BuddyRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Services
 builder.Services.AddScoped<IContactService, ContactService>();
+builder.Services.AddScoped<FirebaseService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IEmailSender, EmailSender>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFirebaseAuthService, FirebaseAuthService>();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<ITripService, TripService>();
+builder.Services.AddScoped<ITripRequestService, TripRequestService>();
+builder.Services.AddScoped<IBuddyService, BuddyService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
 
 var app = builder.Build();
 
@@ -154,5 +200,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

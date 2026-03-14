@@ -8,9 +8,9 @@ public interface IAuthService
     Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginWithGoogleAsync(string email, string? fullName);
     Task<(bool Success, string? Message)> RegisterAsync(RegisterRequestDto request);
     Task<(bool Success, string? Message)> RequestOtpAsync(RequestOtpRequestDto request);
-    Task<(bool Success, string? Message)> VerifyOtpAsync(VerifyOtpRequestDto request);
+    Task<(bool Success, string? Message, LoginResponseDto? Data)> VerifyOtpAsync(VerifyOtpRequestDto request);
     Task<(bool Success, string? Message)> ForgotPasswordAsync(ForgotPasswordRequestDto request);
     Task<(bool Success, string? Message)> ResetPasswordAsync(ResetPasswordRequestDto request);
-    Task<(bool Success, string? Message)> ChangePasswordAsync(int userId, ChangePasswordRequestDto request);
+    Task<(bool Success, string? Message)> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request);
     Task<(bool Success, string? Message, LoginResponseDto? Data)> RefreshTokenAsync(RefreshTokenRequestDto request);
 }

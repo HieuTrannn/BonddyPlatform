@@ -8,6 +8,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace BonddyPlatform.API.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 public class AuthController : ApiControllerBase
 {
     private readonly IAuthService _authService;
@@ -25,10 +26,10 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(400, "Invalid credentials or bad request", typeof(ApiResponse))]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
-        var (success, message, data) = await _authService.LoginAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(data, message);
+        var result = await _authService.LoginAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Login not successful"));
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
     }
 
     [HttpPost("request-otp")]
@@ -37,22 +38,23 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(400, "Bad request", typeof(ApiResponse))]
     public async Task<IActionResult> RequestOtp([FromBody] RequestOtpRequestDto request)
     {
-        var (success, message) = await _authService.RequestOtpAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(message);
+        var result = await _authService.RequestOtpAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "OTP not sent to email"));
+        return Ok(ApiResponse.SuccessResponse("OTP sent to email"));
     }
 
     [HttpPost("verify-otp")]
-    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password.")]
-    [SwaggerResponse(200, "OTP verified", typeof(ApiResponse))]
+    [SwaggerOperation(Summary = "Verify OTP", Description = "Verify OTP for register or forgot password. Purpose: \"Register\" or \"ForgotPassword\". For Register, returns LoginResponseDto (auto login).")]
+    [SwaggerResponse(200, "OTP verified", typeof(ApiResponse<LoginResponseDto>))]
     [SwaggerResponse(400, "Invalid or expired OTP", typeof(ApiResponse))]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
     {
-        var (success, message) = await _authService.VerifyOtpAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(message);
+        var result = await _authService.VerifyOtpAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Invalid or expired OTP"));
+        var message = result.Message ?? "OTP verified";
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, message));
     }
 
     [HttpPost("register")]
@@ -61,10 +63,10 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(400, "Bad request (e.g. email exists, OTP invalid)", typeof(ApiResponse))]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
-        var (success, message) = await _authService.RegisterAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(message);
+        var result = await _authService.RegisterAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Registration not successful"));
+        return Ok(ApiResponse.SuccessResponse("Registration successful"));
     }
 
     [HttpPost("forgot-password")]
@@ -72,8 +74,10 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(200, "OTP sent to email", typeof(ApiResponse))]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
     {
-        var (success, message) = await _authService.ForgotPasswordAsync(request);
-        return Success(message);
+        var result = await _authService.ForgotPasswordAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "OTP not sent to email"));
+        return Ok(ApiResponse.SuccessResponse("OTP sent to email successfully"));
     }
 
     [HttpPost("reset-password")]
@@ -82,10 +86,10 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(400, "Invalid OTP or bad request", typeof(ApiResponse))]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto request)
     {
-        var (success, message) = await _authService.ResetPasswordAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(message);
+        var result = await _authService.ResetPasswordAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Password not reset"));
+        return Ok(ApiResponse.SuccessResponse("Password reset successfully"));
     }
 
     [HttpPost("change-password")]
@@ -98,12 +102,12 @@ public class AuthController : ApiControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null)
-            return Unauthorized("User ID not found in claims");
+            return Unauthorized(ApiResponse.ErrorResponse("User ID not found in claims"));
 
-        var (success, message) = await _authService.ChangePasswordAsync(userId.Value, request);
-        if (!success)
-            return BadRequest(message);
-        return Success(message);
+        var result = await _authService.ChangePasswordAsync(userId.Value, request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Password not changed"));
+        return Ok(ApiResponse.SuccessResponse("Password changed successfully"));
     }
 
     [HttpPost("refresh-token")]
@@ -112,10 +116,10 @@ public class AuthController : ApiControllerBase
     [SwaggerResponse(400, "Invalid or expired refresh token", typeof(ApiResponse))]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request)
     {
-        var (success, message, data) = await _authService.RefreshTokenAsync(request);
-        if (!success)
-            return BadRequest(message);
-        return Success(data, message);
+        var result = await _authService.RefreshTokenAsync(request);
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Refresh token not refreshed"));
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
     }
 
     [HttpPost("login-google")]
@@ -126,14 +130,14 @@ public class AuthController : ApiControllerBase
     {
         var googleUser = await _firebaseAuthService.VerifyIdTokenAsync(request.IdToken);
         if (googleUser == null)
-            return BadRequest("Invalid or expired Google token");
+            return BadRequest(ApiResponse.ErrorResponse("Invalid or expired Google token"));
 
-        var (success, message, data) = await _authService.LoginWithGoogleAsync(
+        var result = await _authService.LoginWithGoogleAsync(
             googleUser.Email,
             googleUser.DisplayName);
 
-        if (!success)
-            return BadRequest(message ?? "Login failed");
-        return Success(data, message ?? "Login successful");
+        if (!result.Success)
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Login not successful"));
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
     }
 }

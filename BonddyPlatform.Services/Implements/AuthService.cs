@@ -2,6 +2,7 @@ using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Services.DTOs.AuthDtos;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -43,13 +44,16 @@ public class AuthService : IAuthService
         await _uow.RefreshTokens.AddAsync(refreshToken);
         await _uow.SaveChangesAsync();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var roles = user.Roles.Select(r => r.Role.ToString()).ToList();
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, roles, user.FullName);
         var response = new LoginResponseDto
         {
+            Email = user.Email,
+            FullName = user.FullName,
+            Roles = user.Roles.Select(r => r.Role).ToList(),
+            IsEmailVerified = user.IsEmailVerified,
             AccessToken = accessToken,
-            RefreshToken = refreshTokenValue,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer"
+            RefreshToken = refreshTokenValue
         };
         return (true, null, response);
     }
@@ -65,10 +69,17 @@ public class AuthService : IAuthService
                 FullName = fullName?.Trim() ?? email.Split('@')[0],
                 Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N")),
                 IsEmailVerified = true,
-                Role = Role.User,
                 Gender = Gender.Other
             };
             await _uow.Users.AddAsync(user);
+            await _uow.SaveChangesAsync();
+
+            // Assign default User role after saving (to get the Id)
+            await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = Role.User });
+            await _uow.SaveChangesAsync();
+
+            // Reload with roles
+            user = (await _uow.Users.GetByIdAsync(user.Id))!;
         }
         else
         {
@@ -77,9 +88,8 @@ public class AuthService : IAuthService
                 user.FullName = fullName.Trim();
             user.UpdatedAt = DateTime.UtcNow;
             _uow.Users.Update(user);
+            await _uow.SaveChangesAsync();
         }
-
-        await _uow.SaveChangesAsync();
 
         var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshTokenValue();
         var refreshToken = new RefreshToken
@@ -91,16 +101,16 @@ public class AuthService : IAuthService
         await _uow.RefreshTokens.AddAsync(refreshToken);
         await _uow.SaveChangesAsync();
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        var roles = user.Roles.Select(r => r.Role.ToString()).ToList();
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, roles, user.FullName);
         var response = new LoginResponseDto
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshTokenValue,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer",
             Email = user.Email,
             FullName = user.FullName,
-            Role = user.Role
+            Roles = user.Roles.Select(r => r.Role).ToList(),
+            IsEmailVerified = user.IsEmailVerified,
+            AccessToken = accessToken,
+            RefreshToken = refreshTokenValue
         };
         return (true, "Login successful", response);
     }
@@ -138,27 +148,34 @@ public class AuthService : IAuthService
         var subject = purpose == OtpPurpose.Register
             ? "Verify your email - Bonddy Platform"
             : "Reset your password - Bonddy Platform";
-        var body = $"<p>Your verification code is: <strong>{otpCode}</strong></p><p>Valid for {OtpExpiryMinutes} minutes.</p>";
+        var purposeTitle = purpose == OtpPurpose.Register ? "Xác thực email" : "Đặt lại mật khẩu";
+        var body = EmailTemplates.BuildOtpEmailHtml(
+            otpCode: otpCode,
+            expiresInMinutes: OtpExpiryMinutes,
+            purposeTitle: purposeTitle,
+            recipientName: null);
         await _emailSender.SendEmailAsync(request.Email, subject, body);
 
         return (true, "OTP has been sent to your email.");
     }
 
-    public async Task<(bool Success, string? Message)> VerifyOtpAsync(VerifyOtpRequestDto request)
+    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> VerifyOtpAsync(VerifyOtpRequestDto request)
     {
         var purpose = ParseOtpPurpose(request.Purpose);
         if (purpose == null)
-            return (false, "Invalid purpose");
+            return (false, "Invalid purpose", null);
 
         var otp = await _uow.OtpVerifications.GetLatestValidAsync(request.Email, purpose.Value);
         if (otp == null)
-            return (false, "Invalid or expired OTP");
+            return (false, "Invalid or expired OTP", null);
 
         if (otp.OtpCode != request.OtpCode.Trim())
-            return (false, "Invalid OTP code");
+            return (false, "Invalid OTP code", null);
 
         otp.IsUsed = true;
         _uow.OtpVerifications.Update(otp);
+
+        LoginResponseDto? loginData = null;
 
         if (purpose == OtpPurpose.Register)
         {
@@ -168,11 +185,40 @@ public class AuthService : IAuthService
                 user.IsEmailVerified = true;
                 user.UpdatedAt = DateTime.UtcNow;
                 _uow.Users.Update(user);
+
+                var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshTokenValue();
+                var refreshToken = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshTokenValue,
+                    ExpiresAt = DateTime.UtcNow.AddDays(RefreshTokenExpiryDays)
+                };
+                await _uow.RefreshTokens.AddAsync(refreshToken);
+
+                var roles = user.Roles.Select(r => r.Role.ToString()).ToList();
+                var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, roles, user.FullName);
+
+                loginData = new LoginResponseDto
+                {
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    Roles = user.Roles.Select(r => r.Role).ToList(),
+                    IsEmailVerified = user.IsEmailVerified,
+                    AccessToken = accessToken,
+                    RefreshToken = refreshTokenValue
+                };
+            }
+            else
+            {
+                return (false, "User not found for this email", null);
             }
         }
 
         await _uow.SaveChangesAsync();
-        return (true, purpose == OtpPurpose.Register ? "Account verified successfully. You can now log in." : "OTP verified successfully.");
+        var message = purpose == OtpPurpose.Register
+            ? "Account verified successfully."
+            : "OTP verified successfully.";
+        return (true, message, loginData);
     }
 
     public async Task<(bool Success, string? Message)> RegisterAsync(RegisterRequestDto request)
@@ -191,6 +237,9 @@ public class AuthService : IAuthService
         await _uow.Users.AddAsync(user);
         await _uow.SaveChangesAsync();
 
+        // Assign default User role
+        await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = Role.User });
+
         var otpCode = GenerateOtpCode();
         var otp = new OtpVerification
         {
@@ -203,19 +252,21 @@ public class AuthService : IAuthService
         await _uow.SaveChangesAsync();
 
         var subject = "Verify your email - Bonddy Platform";
-        var body = $"<p>Welcome, {request.FullName}!</p><p>Your verification code is: <strong>{otpCode}</strong></p><p>Valid for {OtpExpiryMinutes} minutes. Use the Verify OTP API to verify your account.</p>";
+        var body = EmailTemplates.BuildOtpEmailHtml(
+            otpCode: otpCode,
+            expiresInMinutes: OtpExpiryMinutes,
+            purposeTitle: "Xác thực email",
+            recipientName: request.FullName);
         await _emailSender.SendEmailAsync(request.Email, subject, body);
 
-        return (true, "Registration successful. Check your email for the verification OTP, then call Verify OTP to verify your account.");
+        return (true, "Registration successful. Check your email for the verification OTP");
     }
 
     public async Task<(bool Success, string? Message)> ForgotPasswordAsync(ForgotPasswordRequestDto request)
     {
         var user = await _uow.Users.GetByEmailAsync(request.Email);
         if (user == null)
-            return (true, "If the email exists, an OTP has been sent."); // Don't reveal existence
-
-        // Client should call RequestOtp with Purpose=ForgotPassword, then call ResetPassword with OTP
+            return (true, "If the email exists, an OTP has been sent.");
         return (true, "If the email exists, request OTP with purpose ForgotPassword then reset password.");
     }
 
@@ -240,7 +291,7 @@ public class AuthService : IAuthService
         return (true, "Password reset successfully");
     }
 
-    public async Task<(bool Success, string? Message)> ChangePasswordAsync(int userId, ChangePasswordRequestDto request)
+    public async Task<(bool Success, string? Message)> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto request)
     {
         var user = await _uow.Users.GetByIdAsync(userId);
         if (user == null)
@@ -278,14 +329,21 @@ public class AuthService : IAuthService
         await _uow.RefreshTokens.AddAsync(newRefreshToken);
         await _uow.SaveChangesAsync();
 
-        var user = stored.User;
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email);
+        // Reload user with roles for the new token
+        var user = await _uow.Users.GetByIdAsync(stored.UserId);
+        if (user == null)
+            return (false, "User not found", null);
+
+        var roles = user.Roles.Select(r => r.Role.ToString()).ToList();
+        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, roles, user.FullName);
         var response = new LoginResponseDto
         {
+            Email = user.Email,
+            FullName = user.FullName,
+            Roles = user.Roles.Select(r => r.Role).ToList(),
+            IsEmailVerified = user.IsEmailVerified,
             AccessToken = accessToken,
-            RefreshToken = newRefreshTokenValue,
-            ExpiresInSeconds = _jwtTokenGenerator.AccessTokenExpirySeconds,
-            TokenType = "Bearer"
+            RefreshToken = newRefreshTokenValue
         };
         return (true, null, response);
     }

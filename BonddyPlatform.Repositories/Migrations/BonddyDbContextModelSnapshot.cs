@@ -22,13 +22,210 @@ namespace BonddyPlatform.Repositories.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Contact", b =>
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Booking", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BaseRatePerHour")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BuddyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<decimal>("PlatformFeeAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ScheduledStartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("SubtotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SurchargesAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TipAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuddyId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TripId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("Bookings", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BookingSurcharge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.ToTable("BookingSurcharges", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Buddy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Activities")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Bio")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<decimal>("CostPerHour")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Languages")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("decimal(3,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Buddies", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BuddyUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RoomType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TripRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TripId");
+
+                    b.HasIndex("TripRequestId");
+
+                    b.HasIndex("RoomType", "BuddyUserId");
+
+                    b.ToTable("ChatRooms", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoomParticipant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RoleInRoom")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ChatRoomParticipants", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Contact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -59,13 +256,127 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("Contacts", (string)null);
                 });
 
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.OtpVerification", b =>
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Incident", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ReportedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("BookingId", "Status");
+
+                    b.ToTable("Incidents", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentText")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("ContentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EditedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReplyToMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReplyToMessageId");
+
+                    b.HasIndex("SenderUserId");
+
+                    b.HasIndex("RoomId", "CreatedAt");
+
+                    b.ToTable("Messages", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.MessageAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("MessageAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.OtpVerification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -94,13 +405,62 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("OtpVerifications", (string)null);
                 });
 
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.RefreshToken", b =>
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Payment", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalRef")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("HeldAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Method")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ReleasedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Payments", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -116,8 +476,8 @@ namespace BonddyPlatform.Repositories.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -126,13 +486,147 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.User", b =>
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Review", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Rating")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("ReviewerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.HasIndex("ReviewerUserId", "CreatedAt");
+
+                    b.ToTable("Reviews", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Trip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Adults")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Children")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DurationHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("PreferredLanguages")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TravelerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("City", "StartDate");
+
+                    b.HasIndex("TravelerUserId", "CreatedAt");
+
+                    b.ToTable("Trips", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.TripRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuddyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsInboxOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("OfferedPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuddyId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TripId");
+
+                    b.HasIndex("TripId", "BuddyId")
+                        .IsUnique();
+
+                    b.ToTable("TripRequests", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Address")
                         .HasMaxLength(255)
@@ -173,9 +667,6 @@ namespace BonddyPlatform.Repositories.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -189,6 +680,222 @@ namespace BonddyPlatform.Repositories.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            Address = "",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@bonddy.com",
+                            FullName = "Bonddy Admin",
+                            Gender = 2,
+                            IsEmailVerified = true,
+                            Password = "$2a$11$4utbNwmPKUJywWue101YXe7l0StEL09.KPQdV04hADeCAswcd7QFq",
+                            PhoneNumber = "",
+                            ProfilePicture = "",
+                            aboutMe = ""
+                        });
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.UserRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Role")
+                        .IsUnique();
+
+                    b.ToTable("UserRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0001-000000000001"),
+                            AssignedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Role = 0,
+                            UserId = new Guid("00000000-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0001-000000000002"),
+                            AssignedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Role = 1,
+                            UserId = new Guid("00000000-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0001-000000000003"),
+                            AssignedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Role = 2,
+                            UserId = new Guid("00000000-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0001-000000000004"),
+                            AssignedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Role = 3,
+                            UserId = new Guid("00000000-0000-0000-0000-000000000001")
+                        });
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Booking", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Buddy", "Buddy")
+                        .WithMany()
+                        .HasForeignKey("BuddyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Buddy");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BookingSurcharge", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
+                        .WithMany("Surcharges")
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Buddy", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.TripRequest", "TripRequest")
+                        .WithMany()
+                        .HasForeignKey("TripRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("TripRequest");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoomParticipant", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.ChatRoom", "Room")
+                        .WithMany("Participants")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Incident", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "ReportedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("ReportedByUser");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Message", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Message", "ReplyToMessage")
+                        .WithMany()
+                        .HasForeignKey("ReplyToMessageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.ChatRoom", "Room")
+                        .WithMany("Messages")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "SenderUser")
+                        .WithMany()
+                        .HasForeignKey("SenderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReplyToMessage");
+
+                    b.Navigation("Room");
+
+                    b.Navigation("SenderUser");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.MessageAttachment", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Message", "Message")
+                        .WithMany("Attachments")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Payment", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
+                        .WithOne("Payment")
+                        .HasForeignKey("BonddyPlatform.Repositories.Models.Payment", "BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.RefreshToken", b =>
@@ -200,6 +907,90 @@ namespace BonddyPlatform.Repositories.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Review", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "ReviewerUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+
+                    b.Navigation("ReviewerUser");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Trip", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "TravelerUser")
+                        .WithMany()
+                        .HasForeignKey("TravelerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TravelerUser");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.TripRequest", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Buddy", "Buddy")
+                        .WithMany()
+                        .HasForeignKey("BuddyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Buddy");
+
+                    b.Navigation("Trip");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.UserRole", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "User")
+                        .WithMany("Roles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Booking", b =>
+                {
+                    b.Navigation("Payment");
+
+                    b.Navigation("Surcharges");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Participants");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Message", b =>
+                {
+                    b.Navigation("Attachments");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.User", b =>
+                {
+                    b.Navigation("Roles");
                 });
 #pragma warning restore 612, 618
         }

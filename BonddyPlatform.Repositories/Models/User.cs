@@ -4,15 +4,13 @@ namespace BonddyPlatform.Repositories.Models;
 
 public class User
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     [Required, MaxLength(255), EmailAddress]
     public string Email { get; set; } = string.Empty;
     [Required, MaxLength(500)]
     public string Password { get; set; } = string.Empty;
-    [Required, MaxLength(200)]
     public string FullName { get; set; } = string.Empty;
     public Gender Gender { get; set; }
-    public Role Role { get; set; }
     public string? PhoneNumber { get; set; } = string.Empty;
     public string? Address { get; set; } = string.Empty;
     public DateTime? DateOfBirth { get; set; }
@@ -21,9 +19,12 @@ public class User
     public bool IsEmailVerified { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>All roles assigned to this user.</summary>
+    public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 }
 
-public enum Gender 
+public enum Gender
 {
     Male,
     Female,
@@ -32,9 +33,8 @@ public enum Gender
 
 public enum Role
 {
-    Admin, // Admin
-    Buddy, // Buddy
-    CSKH, // Customer Service & Knowledge
-    Partner, // Partner
-    User // User
+    Admin,  // Platform administrator
+    Buddy,  // Local buddy/guide
+    CS,     // Customer Service
+    User    // Regular traveler
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +8,7 @@ namespace BonddyPlatform.Services.DTOs.ContactDtos
 {
     public class ContactResponseDto
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Gmail { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;

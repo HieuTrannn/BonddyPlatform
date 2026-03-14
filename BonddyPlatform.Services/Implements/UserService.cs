@@ -5,16 +5,22 @@ using BonddyPlatform.Services.DTOs.UserDtos;
 using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace BonddyPlatform.Services.Implements;
 
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _uow;
+    private readonly FirebaseService _firebaseService;
+    private readonly ILogger<UserService> _logger;
 
-    public UserService(IUnitOfWork uow)
+    public UserService(IUnitOfWork uow, FirebaseService firebaseService, ILogger<UserService> logger)
     {
         _uow = uow;
+        _firebaseService = firebaseService;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<UserResponseDto>> GetAllAsync()
@@ -25,10 +31,8 @@ public class UserService : IUserService
 
     public async Task<PagedResultDto<UserResponseDto>> GetPagedAsync(UserSearchRequestDto request)
     {
-        // Get queryable from repository
         var query = _uow.Users.GetQueryable();
 
-        // Apply search across multiple fields
         query = query.ApplySearchByProperties(
             request.Search,
             nameof(User.FullName),
@@ -37,37 +41,25 @@ public class UserService : IUserService
             nameof(User.Address)
         );
 
-        // Apply custom filters
         if (request.Gender.HasValue)
-        {
             query = query.Where(u => u.Gender == request.Gender.Value);
-        }
 
         if (request.IsEmailVerified.HasValue)
-        {
             query = query.Where(u => u.IsEmailVerified == request.IsEmailVerified.Value);
-        }
 
         if (request.CreatedFrom.HasValue)
-        {
             query = query.Where(u => u.CreatedAt >= request.CreatedFrom.Value);
-        }
 
         if (request.CreatedTo.HasValue)
-        {
             query = query.Where(u => u.CreatedAt <= request.CreatedTo.Value);
-        }
 
-        // Get total count before paging
         var totalCount = await query.CountAsync();
 
-        // Apply sorting (default to CreatedAt desc if not specified)
         query = query.ApplySorting(
             request.SortBy ?? nameof(User.CreatedAt),
             request.SortOrder
         );
 
-        // Apply paging
         var pagedQuery = query.ApplyPaging(request.Page, request.PageSize);
         var items = await pagedQuery.ToListAsync();
 
@@ -80,7 +72,7 @@ public class UserService : IUserService
         };
     }
 
-    public async Task<UserResponseDto?> GetByIdAsync(int id)
+    public async Task<UserResponseDto?> GetByIdAsync(Guid id)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         return user == null ? null : MapToDto(user);
@@ -88,7 +80,6 @@ public class UserService : IUserService
 
     public async Task<UserResponseDto> CreateAsync(UserCreateRequestDto dto)
     {
-        // Check unique email
         var existingUser = await _uow.Users.GetByEmailAsync(dto.Email);
         if (existingUser != null)
             throw new InvalidOperationException("Email đã tồn tại.");
@@ -99,12 +90,10 @@ public class UserService : IUserService
             Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             FullName = dto.FullName.Trim(),
             Gender = dto.Gender,
-            Role = dto.Role,
             PhoneNumber = dto.PhoneNumber?.Trim(),
             Address = dto.Address?.Trim(),
             DateOfBirth = dto.DateOfBirth,
             aboutMe = dto.AboutMe?.Trim(),
-            ProfilePicture = dto.ProfilePicture?.Trim(),
             IsEmailVerified = false,
             CreatedAt = DateTime.UtcNow
         };
@@ -112,32 +101,79 @@ public class UserService : IUserService
         await _uow.Users.AddAsync(user);
         await _uow.SaveChangesAsync();
 
+        // Assign the admin-specified role (default to User if not specified)
+        await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = dto.Role });
+        await _uow.SaveChangesAsync();
+
+        // Reload so Roles are populated
+        user = (await _uow.Users.GetByIdAsync(user.Id))!;
         return MapToDto(user);
     }
 
-    public async Task<UserResponseDto> UpdateAsync(int id, UserUpdateRequestDto dto)
+    public async Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         if (user == null)
             throw new KeyNotFoundException("Không tìm thấy User.");
 
-        user.FullName = dto.FullName.Trim();
-        user.Gender = dto.Gender;
-        user.Role = dto.Role;
-        user.PhoneNumber = dto.PhoneNumber?.Trim();
-        user.Address = dto.Address?.Trim();
-        user.DateOfBirth = dto.DateOfBirth;
-        user.aboutMe = dto.AboutMe?.Trim();
-        user.ProfilePicture = dto.ProfilePicture?.Trim();
-        user.UpdatedAt = DateTime.UtcNow;
+        if (dto.FullName != null) user.FullName = dto.FullName.Trim();
+        if (dto.Gender.HasValue) user.Gender = dto.Gender.Value;
+        if (dto.PhoneNumber != null) user.PhoneNumber = dto.PhoneNumber.Trim();
+        if (dto.Address != null) user.Address = dto.Address.Trim();
+        if (dto.DateOfBirth.HasValue) user.DateOfBirth = dto.DateOfBirth;
+        if (dto.AboutMe != null) user.aboutMe = dto.AboutMe.Trim();
 
+        user.UpdatedAt = DateTime.UtcNow;
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
         return MapToDto(user);
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto)
+    {
+        var user = await _uow.Users.GetByIdAsync(id);
+        if (user == null)
+            throw new KeyNotFoundException("Không tìm thấy User.");
+
+        bool isUpdated = false;
+
+        if (dto.FullName != null && dto.FullName != user.FullName) { user.FullName = dto.FullName.Trim(); isUpdated = true; }
+        if (dto.Gender.HasValue && dto.Gender.Value != user.Gender) { user.Gender = dto.Gender.Value; isUpdated = true; }
+        if (dto.PhoneNumber != null && dto.PhoneNumber != user.PhoneNumber) { user.PhoneNumber = dto.PhoneNumber.Trim(); isUpdated = true; }
+        if (dto.Address != null && dto.Address != user.Address) { user.Address = dto.Address.Trim(); isUpdated = true; }
+        if (dto.DateOfBirth.HasValue && dto.DateOfBirth != user.DateOfBirth) { user.DateOfBirth = dto.DateOfBirth; isUpdated = true; }
+        if (dto.AboutMe != null && dto.AboutMe != user.aboutMe) { user.aboutMe = dto.AboutMe.Trim(); isUpdated = true; }
+
+        if (!isUpdated)
+        {
+            _logger.LogWarning("Không có thay đổi nào được thực hiện.");
+            throw new InvalidOperationException("Không có thay đổi nào được thực hiện.");
+        }
+
+        user.UpdatedAt = DateTime.UtcNow;
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
+
+        return MapToDto(user);
+    }
+
+    public async Task<UserResponseDto?> UploadAvatarAsync(Guid id, IFormFile profilePicture)
+    {
+        var user = await _uow.Users.GetByIdAsync(id);
+        if (user == null) return null;
+
+        if (profilePicture.Length > 10 * 1024 * 1024)
+            throw new InvalidOperationException("Kích thước ảnh vượt quá 10MB.");
+            
+        user.ProfilePicture = await _firebaseService.UploadAvatarAsync(profilePicture.OpenReadStream(), profilePicture.FileName);
+        user.UpdatedAt = DateTime.UtcNow;
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
+        return MapToDto(user);
+    }
+
+    public async Task DeleteAsync(Guid id)
     {
         var user = await _uow.Users.GetByIdAsync(id);
         if (user == null)
@@ -153,7 +189,7 @@ public class UserService : IUserService
         Email = user.Email,
         FullName = user.FullName,
         Gender = user.Gender,
-        Role = user.Role,
+        Roles = user.Roles.Select(r => r.Role).ToList(),
         PhoneNumber = user.PhoneNumber,
         Address = user.Address,
         DateOfBirth = user.DateOfBirth,

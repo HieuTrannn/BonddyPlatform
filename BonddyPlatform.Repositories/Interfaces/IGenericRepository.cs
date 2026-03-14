@@ -15,7 +15,7 @@ namespace BonddyPlatform.Repositories.Interfaces
         IQueryable<T> GetQueryable();
 
         Task<IEnumerable<T>> GetAllAsync();
-        Task<T?> GetByIdAsync(object id);
+        Task<T?> GetByIdAsync(Guid id);
 
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
 

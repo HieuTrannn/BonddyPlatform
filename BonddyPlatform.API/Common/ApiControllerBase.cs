@@ -31,13 +31,13 @@ public abstract class ApiControllerBase : ControllerBase
     /// Returns a 201 Created response with location header
     /// </summary>
     protected IActionResult CreatedAtAction<T>(string actionName, object routeValues, T? data = default, string? message = null)
-        => CreatedAtAction(actionName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
+        => base.CreatedAtAction(actionName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
 
     /// <summary>
     /// Returns a 201 Created response with location header (route name)
     /// </summary>
     protected IActionResult CreatedAtRoute<T>(string routeName, object routeValues, T? data = default, string? message = null)
-        => CreatedAtRoute(routeName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
+        => base.CreatedAtRoute(routeName, routeValues, ApiResponse<T>.SuccessResponse(data, message));
 
     /// <summary>
     /// Returns a 204 No Content response
@@ -155,18 +155,29 @@ public abstract class ApiControllerBase : ControllerBase
     /// <summary>
     /// Gets the current user ID from claims
     /// </summary>
-    protected int? GetCurrentUserId()
+    protected Guid? GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             return null;
         return userId;
     }
 
     /// <summary>
+    /// Gets the current user full name from claims
+    /// </summary>
+    protected string? GetCurrentUserFullName()
+    {
+        var fullNameClaim = User.FindFirst(ClaimTypes.Name)?.Value;
+        if (string.IsNullOrEmpty(fullNameClaim))
+            return null;
+        return fullNameClaim;
+    }
+
+    /// <summary>
     /// Gets the current user ID from claims or throws Unauthorized
     /// </summary>
-    protected int GetCurrentUserIdOrThrow()
+    protected Guid GetCurrentUserIdOrThrow()
     {
         var userId = GetCurrentUserId();
         if (userId == null)

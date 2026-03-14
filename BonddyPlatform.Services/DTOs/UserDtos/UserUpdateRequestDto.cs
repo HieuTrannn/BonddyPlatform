@@ -5,12 +5,9 @@ namespace BonddyPlatform.Services.DTOs.UserDtos;
 
 public class UserUpdateRequestDto
 {
-    [Required, MaxLength(200)]
-    public string FullName { get; set; } = string.Empty;
+    public string? FullName { get; set; }
 
-    public Gender Gender { get; set; }
-
-    public Role Role { get; set; }
+    public Gender? Gender { get; set; }
 
     [MaxLength(20)]
     public string? PhoneNumber { get; set; }
@@ -22,7 +19,4 @@ public class UserUpdateRequestDto
 
     [MaxLength(1000)]
     public string? AboutMe { get; set; }
-
-    [MaxLength(500)]
-    public string? ProfilePicture { get; set; }
 }

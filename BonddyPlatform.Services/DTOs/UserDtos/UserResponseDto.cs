@@ -3,11 +3,11 @@ namespace BonddyPlatform.Services.DTOs.UserDtos;
 
 public class UserResponseDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public Gender Gender { get; set; }
-    public Role Role { get; set; }
+    public List<Role> Roles { get; set; } = new();
     public string? PhoneNumber { get; set; }
     public string? Address { get; set; }
     public DateTime? DateOfBirth { get; set; }
