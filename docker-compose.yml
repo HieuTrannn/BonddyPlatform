@@ -13,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"   # Chỉ localhost, tránh expose ra ngoài
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-BonddyPlatformDb}"]
       interval: 10s
@@ -39,7 +39,7 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE:-BonddyPlatform}
       Jwt__AccessTokenExpiryMinutes: ${JWT_ACCESS_TOKEN_EXPIRY_MINUTES:-60}
     ports:
-      - "8080:8080"   # Nginx sẽ proxy 80/443 -> 8080
+      - "8080:8080" # Nginx sẽ proxy 80/443 -> 8080
     # Mount Firebase credentials (bỏ comment 1 dòng dưới khi đã có file JSON trên VPS)
     # volumes:
     #   - ./BonddyPlatform.API/Services/bonddyplatform-firebase-adminsdk-fbsvc-c6f3d833ca.json:/app/Services/bonddyplatform-firebase-adminsdk-fbsvc-c6f3d833ca.json:ro
