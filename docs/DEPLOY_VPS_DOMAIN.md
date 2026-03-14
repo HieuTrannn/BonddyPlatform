@@ -327,25 +327,25 @@ Làm theo hướng dẫn (email, đồng ý điều khoản). Certbot sẽ tự 
 
 ## Phần 6: Deploy Backend (Bonddy API)
 
+Nếu bạn đã chạy **docker compose up -d --build** (Phần 4) và **Nginx + Certbot** (Phần 5), backend coi như đã deploy. Phần 6 là kiểm tra và cập nhật khi cần.
+
 ### 6.1 Đưa code lên VPS
 
-- Dùng **git clone** (nếu repo private: SSH key hoặc deploy key), hoặc **SCP/rsync** đẩy thư mục publish.
+- Đã xong nếu bạn đã **git clone** và có thư mục `~/BonddyPlatform` với `docker-compose.yml`, `.env`, và source code.
 
 ### 6.2 Cấu hình ứng dụng
 
-- File **appsettings.Production.json** hoặc biến môi trường: `ConnectionStrings__DefaultConnection`, JWT secret, CORS origins (https://bonddy.vn, https://www.bonddy.vn), v.v.
+- **Docker**: Connection string, JWT, v.v. lấy từ file **`.env`** (đã cấu hình ở Phần 4). Không cần sửa `appsettings.Production.json` trong repo vì env trong `docker-compose.yml` ghi đè.
+- **CORS**: API đã cho phép `https://bonddy.vn`, `https://www.bonddy.vn`, `https://bonddy.vercel.app`, `http://localhost:3000`. Nếu frontend chạy domain khác, thêm origin đó trong `Program.cs` (AddCors) rồi build lại.
 
 ### 6.3 Chạy API
 
-- **Docker**: chạy container từ image, map port (ví dụ 5000).
-- **Trực tiếp**: `dotnet BonddyPlatform.API.dll` hoặc dùng **systemd** (tạo file service) để chạy nền và tự khởi động lại.
+- **Docker**: Đang chạy nếu bạn đã `docker compose up -d --build`. Kiểm tra: `docker compose ps` (hai container Up).
+- **Cập nhật code**: Sau khi `git pull`, chạy lại `docker compose up -d --build` để build image mới và restart API.
 
-### 6.4 Chạy migration database
+### 6.4 Migration database
 
-```bash
-dotnet ef database update
-# hoặc chạy trong container nếu dùng Docker
-```
+- **Tự chạy** khi API khởi động (`MigrateAsync` trong `Program.cs`). Không cần chạy `dotnet ef database update` thủ công trên VPS.
 
 ---
 

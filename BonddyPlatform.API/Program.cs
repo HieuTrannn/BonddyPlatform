@@ -48,6 +48,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins(
+            "https://bonddy.vn",
+            "https://www.bonddy.vn",
             "https://bonddy.vercel.app",
             "http://localhost:3000")
               .AllowAnyHeader()
