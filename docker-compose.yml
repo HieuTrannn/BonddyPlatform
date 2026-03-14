@@ -32,6 +32,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      ENABLE_SWAGGER: "true"
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-BonddyPlatformDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}"
       Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
       Jwt__Issuer: ${JWT_ISSUER:-BonddyPlatform}
