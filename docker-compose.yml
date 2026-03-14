@@ -1,0 +1,47 @@
+# Bonddy Platform - API + PostgreSQL (production / VPS)
+# Chạy từ thư mục gốc repo: docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bonddy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-BonddyPlatformDb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"   # Chỉ localhost, tránh expose ra ngoài
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-BonddyPlatformDb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: BonddyPlatform.API/Dockerfile
+    container_name: bonddy-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-BonddyPlatformDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}"
+      Jwt__Secret: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      Jwt__Issuer: ${JWT_ISSUER:-BonddyPlatform}
+      Jwt__Audience: ${JWT_AUDIENCE:-BonddyPlatform}
+      Jwt__AccessTokenExpiryMinutes: ${JWT_ACCESS_TOKEN_EXPIRY_MINUTES:-60}
+    ports:
+      - "8080:8080"   # Nginx sẽ proxy 80/443 -> 8080
+    # Mount Firebase credentials nếu dùng (tùy chọn)
+    volumes:
+      - ./BonddyPlatform.API/Services/bonddyplatform-firebase-adminsdk-fbsvc-c6f3d833ca.json:/app/Services/bonddyplatform-firebase-adminsdk-fbsvc-c6f3d833ca.json:ro
+
+volumes:
+  postgres_data:
