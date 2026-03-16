@@ -10,6 +10,7 @@ public class AuthService : IAuthService
 {
     private const int OtpExpiryMinutes = 10;
     private const int RefreshTokenExpiryDays = 7;
+    private const string EmailNotVerifiedCode = "EMAIL_NOT_VERIFIED";
 
     private readonly IUnitOfWork _uow;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
@@ -22,17 +23,17 @@ public class AuthService : IAuthService
         _emailSender = emailSender;
     }
 
-    public async Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginAsync(LoginRequestDto request)
+    public async Task<(bool Success, string? Code, string? Message, LoginResponseDto? Data)> LoginAsync(LoginRequestDto request)
     {
         var user = await _uow.Users.GetByEmailAsync(request.Email);
         if (user == null)
-            return (false, "Email or password is incorrect", null);
+            return (false, null, "Email or password is incorrect", null);
 
         if (!user.IsEmailVerified)
-            return (false, "Please verify your email first.", null);
+            return (false, EmailNotVerifiedCode, "Please verify your email first.", null);
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
-            return (false, "Email or password is incorrect", null);
+            return (false, null, "Email or password is incorrect", null);
 
         var refreshTokenValue = _jwtTokenGenerator.GenerateRefreshTokenValue();
         var refreshToken = new RefreshToken
@@ -55,7 +56,7 @@ public class AuthService : IAuthService
             AccessToken = accessToken,
             RefreshToken = refreshTokenValue
         };
-        return (true, null, response);
+        return (true, null, null, response);
     }
 
     public async Task<(bool Success, string? Message, LoginResponseDto? Data)> LoginWithGoogleAsync(string email, string? fullName)
