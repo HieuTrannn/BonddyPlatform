@@ -52,7 +52,35 @@ public class TripRequestService : ITripRequestService
         await _uow.TripRequests.AddAsync(entity);
         await _uow.SaveChangesAsync();
 
-        return MapToDto(entity, trip, buddy, existingChatRoomId: null);
+        // Auto-create direct chat room between traveler and buddy for this request
+        var travelerUserId = trip.TravelerUserId;
+        var buddyProfileUserId = buddy.UserId;
+        var room = await _chatService.GetOrCreateDirectChatAsync(entity.Id, travelerUserId, buddyProfileUserId);
+
+        // Send the first message in chat summarizing the trip and the offer
+        var introLines = new List<string>
+        {
+            "📌 New trip request from buddy",
+            $"Trip: {trip.City} on {trip.StartDate:yyyy-MM-dd} at {trip.StartTime}",
+            $"Group: {trip.Adults} adults, {trip.Children} children, duration {trip.DurationHours} hours",
+            dto.IsInboxOnly
+                ? "Offer: Inbox only (buddy prefers to discuss price in chat)."
+                : $"Offer price: {dto.OfferedPrice:0.##}",
+        };
+        if (!string.IsNullOrWhiteSpace(dto.Note))
+        {
+            introLines.Add("");
+            introLines.Add("Message from buddy:");
+            introLines.Add(dto.Note.Trim());
+        }
+
+        var introText = string.Join(Environment.NewLine, introLines);
+        await _chatService.SendMessageAsync(room.Id, buddyProfileUserId, new DTOs.ChatDtos.SendMessageRequestDto
+        {
+            ContentText = introText
+        });
+
+        return MapToDto(entity, trip, buddy, existingChatRoomId: room.Id);
     }
 
     public async Task<IEnumerable<TripRequestResponseDto>> GetByTripIdAsync(Guid tripId, Guid requesterId)
