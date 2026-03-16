@@ -1,6 +1,7 @@
 using BonddyPlatform.API.Common;
 using BonddyPlatform.Services.DTOs.ChatDtos;
 using BonddyPlatform.Services.DTOs.Common;
+using BonddyPlatform.Services.DTOs.NotificationDtos;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace BonddyPlatform.API.Controllers;
 public class ChatController : ApiControllerBase
 {
     private readonly IChatService _chatService;
+    private readonly IChatReadService _chatReadService;
 
-    public ChatController(IChatService chatService)
+    public ChatController(IChatService chatService, IChatReadService chatReadService)
     {
         _chatService = chatService;
+        _chatReadService = chatReadService;
     }
 
     /// <summary>
@@ -34,6 +37,31 @@ public class ChatController : ApiControllerBase
     }
 
     /// <summary>
+    /// Get unread summary for all rooms of current user.
+    /// </summary>
+    [HttpGet("unread-summary")]
+    [SwaggerOperation(Summary = "Get unread summary for my chat rooms")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ChatUnreadSummaryDto>))]
+    public async Task<IActionResult> GetUnreadSummary()
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _chatReadService.GetUnreadSummaryAsync(userId);
+        return Ok(ApiResponse<ChatUnreadSummaryDto>.SuccessResponse(result));
+    }
+
+    /// <summary>
+    /// Mark a room as read for current user.
+    /// </summary>
+    [HttpPost("rooms/{roomId:guid}/mark-read")]
+    [SwaggerOperation(Summary = "Mark chat room as read")]
+    public async Task<IActionResult> MarkRoomRead(Guid roomId)
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        await _chatReadService.MarkRoomReadAsync(userId, roomId);
+        return Ok(ApiResponse.SuccessResponse("Room marked as read."));
+    }
+
+    /// <summary>
     /// Get or create chat room for a trip.
     /// </summary>
     [HttpPost("trips/{tripId:guid}/room")]
@@ -43,6 +71,19 @@ public class ChatController : ApiControllerBase
     {
         var userId = GetCurrentUserIdOrThrow();
         return Ok(ApiResponse<ChatRoomDto>.SuccessResponse(await _chatService.GetOrCreateTripRoomAsync(tripId, userId), "Trip chat room created successfully"));
+    }
+
+    /// <summary>
+    /// Traveler proactively starts or opens a direct chat with a buddy (no Trip required).
+    /// </summary>
+    [HttpPost("buddies/{buddyUserId:guid}/room")]
+    [SwaggerOperation(Summary = "Get or create direct chat room with buddy (no Trip)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ChatRoomDto>))]
+    public async Task<IActionResult> GetOrCreateDirectBuddyRoom(Guid buddyUserId)
+    {
+        var travelerUserId = GetCurrentUserIdOrThrow();
+        var room = await _chatService.GetOrCreateDirectChatByBuddyUserIdAsync(travelerUserId, buddyUserId);
+        return Ok(ApiResponse<ChatRoomDto>.SuccessResponse(room, "Direct buddy chat room ready"));
     }
 
     /// <summary>

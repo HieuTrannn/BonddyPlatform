@@ -22,6 +22,8 @@ namespace BonddyPlatform.Repositories.Implements
         public IChatRoomRepository ChatRooms { get; }
         public IChatParticipantRepository ChatParticipants { get; }
         public IMessageRepository Messages { get; }
+        public IChatRoomUserStateRepository ChatRoomUserStates { get; }
+        public INotificationRepository Notifications { get; }
         public IBuddyRepository Buddies { get; }
         public IBookingRepository Bookings { get; }
         public IPaymentRepository Payments { get; }
@@ -40,6 +42,8 @@ namespace BonddyPlatform.Repositories.Implements
             IChatRoomRepository chatRoomRepository,
             IChatParticipantRepository chatParticipantRepository,
             IMessageRepository messageRepository,
+            IChatRoomUserStateRepository chatRoomUserStateRepository,
+            INotificationRepository notificationRepository,
             IBuddyRepository buddyRepository,
             IBookingRepository bookingRepository,
             IPaymentRepository paymentRepository,
@@ -57,6 +61,8 @@ namespace BonddyPlatform.Repositories.Implements
             ChatRooms = chatRoomRepository;
             ChatParticipants = chatParticipantRepository;
             Messages = messageRepository;
+            ChatRoomUserStates = chatRoomUserStateRepository;
+            Notifications = notificationRepository;
             Buddies = buddyRepository;
             Bookings = bookingRepository;
             Payments = paymentRepository;

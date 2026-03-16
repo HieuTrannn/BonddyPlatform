@@ -19,6 +19,8 @@ namespace BonddyPlatform.Repositories.Interfaces
         IChatRoomRepository ChatRooms { get; }
         IChatParticipantRepository ChatParticipants { get; }
         IMessageRepository Messages { get; }
+        IChatRoomUserStateRepository ChatRoomUserStates { get; }
+        INotificationRepository Notifications { get; }
         IBuddyRepository Buddies { get; }
         IBookingRepository Bookings { get; }
         IPaymentRepository Payments { get; }

@@ -14,6 +14,12 @@ public interface IChatService
     /// </summary>
     Task<ChatRoomDto> GetOrCreateDirectChatAsync(Guid tripRequestId, Guid travelerUserId, Guid buddyUserId);
 
+    /// <summary>
+    /// Traveler proactively starts a direct chat with a buddy, without any Trip.
+    /// If a DirectBuddy room already exists between these two users, returns it.
+    /// </summary>
+    Task<ChatRoomDto> GetOrCreateDirectChatByBuddyUserIdAsync(Guid travelerUserId, Guid buddyUserId);
+
     Task<bool> IsUserInRoomAsync(Guid roomId, Guid userId);
 
     Task<PagedResultDto<MessageDto>> GetMessagesAsync(Guid roomId, int page, int pageSize);

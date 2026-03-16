@@ -24,6 +24,8 @@ namespace BonddyPlatform.Repositories.Persistences
         public DbSet<ChatRoomParticipant> ChatRoomParticipants => Set<ChatRoomParticipant>();
         public DbSet<Message> Messages => Set<Message>();
         public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
+        public DbSet<Notification> Notifications => Set<Notification>();
+        public DbSet<ChatRoomUserState> ChatRoomUserStates => Set<ChatRoomUserState>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -418,6 +420,50 @@ namespace BonddyPlatform.Repositories.Persistences
                     .WithMany(m => m.Attachments)
                     .HasForeignKey(x => x.MessageId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.ToTable("Notifications");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Type).IsRequired();
+                entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+                entity.Property(x => x.Body).HasMaxLength(2000).IsRequired();
+                entity.Property(x => x.DataJson);
+                entity.Property(x => x.IsRead).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
+                entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+            });
+
+            modelBuilder.Entity<ChatRoomUserState>(entity =>
+            {
+                entity.ToTable("ChatRoomUserStates");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.LastReadAt).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+                entity.Property(x => x.UpdatedAt).IsRequired();
+
+                entity.HasOne(x => x.Room)
+                    .WithMany()
+                    .HasForeignKey(x => x.RoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.User)
+                    .WithMany()
+                    .HasForeignKey(x => x.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(x => new { x.RoomId, x.UserId }).IsUnique();
+                entity.HasIndex(x => x.UserId);
             });
 
             SeedDefaultData(modelBuilder);

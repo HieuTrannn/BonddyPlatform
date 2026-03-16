@@ -88,5 +88,170 @@ public static class EmailTemplates
 </body>
 </html>";
     }
+
+    public static string BuildNewTripRequestEmailHtml(
+        string travelerName,
+        string buddyName,
+        string city,
+        DateOnly startDate,
+        TimeOnly startTime,
+        int adults,
+        int children,
+        int durationHours,
+        bool isInboxOnly,
+        decimal? offeredPrice,
+        string? buddyNote,
+        Guid tripId,
+        DateTime createdAtUtc,
+        string baseWebUrl = "https://bonddy.vercel.app")
+    {
+        var safeTravelerName = WebUtility.HtmlEncode(travelerName ?? string.Empty);
+        var safeBuddyName = WebUtility.HtmlEncode(buddyName ?? "A Bonddy buddy");
+        var safeCity = WebUtility.HtmlEncode(city ?? string.Empty);
+        var safeNote = string.IsNullOrWhiteSpace(buddyNote) ? null : WebUtility.HtmlEncode(buddyNote.Trim());
+
+        var offerLine = isInboxOnly
+            ? "This buddy prefers to discuss the price directly in chat."
+            : $"Proposed price: <strong>{(offeredPrice ?? 0):0.##}</strong>";
+
+        var requestUrl = $"{baseWebUrl.TrimEnd('/')}/trips/{tripId}/requests";
+
+        var noteSection = safeNote == null
+            ? string.Empty
+            : $"""
+                <tr>
+                  <td style="padding:16px 24px 0;font-size:14px;color:#333;">
+                    <strong>Message from buddy:</strong><br/>
+                    <span style="white-space:pre-line;">{safeNote}</span>
+                  </td>
+                </tr>
+              """;
+
+        return $"""
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New trip request</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#f5f5f7;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f7;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.12);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#ec4899,#8b5cf6);padding:20px 24px;color:#ffffff;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-size:20px;font-weight:600;">
+                      Bonddy • New Trip Request
+                    </td>
+                    <td align="right" style="font-size:12px;opacity:0.85;">
+                      {createdAtUtc:yyyy-MM-dd HH:mm} UTC
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:20px 24px 4px;font-size:16px;color:#111827;">
+                Hi {safeTravelerName},
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 12px;font-size:14px;color:#4b5563;line-height:1.6;">
+                <strong>{safeBuddyName}</strong> has just sent a new request for your trip.
+                You can review the details below and continue the conversation in chat.
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 24px 16px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;">
+                  <tr>
+                    <td colspan="2" style="background-color:#f9fafb;padding:12px 16px;font-size:14px;font-weight:600;color:#111827;">
+                      Your trip
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 16px;font-size:13px;color:#6b7280;width:30%;">Destination</td>
+                    <td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:500;">
+                      {safeCity}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 16px 10px;font-size:13px;color:#6b7280;">Date &amp; time</td>
+                    <td style="padding:0 16px 10px;font-size:13px;color:#111827;">
+                      {startDate:yyyy-MM-dd} at {startTime}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 16px 10px;font-size:13px;color:#6b7280;">Group</td>
+                    <td style="padding:0 16px 10px;font-size:13px;color:#111827;">
+                      {adults} adults, {children} children • {durationHours} hours
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 24px 16px;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;">
+                  <tr>
+                    <td colspan="2" style="background-color:#f9fafb;padding:12px 16px;font-size:14px;font-weight:600;color:#111827;">
+                      Buddy's offer
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:10px 16px;font-size:13px;color:#6b7280;width:30%;">Buddy</td>
+                    <td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:500;">
+                      {safeBuddyName}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 16px 12px;font-size:13px;color:#6b7280;">Offer</td>
+                    <td style="padding:0 16px 12px;font-size:13px;color:#111827;">
+                      {offerLine}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            {noteSection}
+
+            <tr>
+              <td style="padding:20px 24px 16px;" align="center">
+                <a href="{requestUrl}"
+                   style="display:inline-block;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#ffffff;text-decoration:none;
+                          padding:10px 24px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(236,72,153,0.45);">
+                  View request &amp; chat with buddy
+                </a>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 24px 20px;font-size:12px;color:#9ca3af;line-height:1.6;">
+                If the button above does not work, copy and paste this link into your browser:<br/>
+                <span style="color:#6b7280;">{requestUrl}</span>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="background-color:#f9fafb;padding:12px 24px;font-size:11px;color:#9ca3af;text-align:center;">
+                You are receiving this email because you created a trip on Bonddy and enabled notifications.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+""";
+    }
 }
 
