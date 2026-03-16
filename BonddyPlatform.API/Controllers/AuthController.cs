@@ -41,7 +41,7 @@ public class AuthController : ApiControllerBase
         var result = await _authService.RequestOtpAsync(request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "OTP not sent to email"));
-        return Ok(ApiResponse.SuccessResponse("OTP sent to email"));
+        return Ok(ApiResponse.SuccessResponse(result.Message ?? "OTP sent to email"));
     }
 
     [HttpPost("verify-otp")]
@@ -66,18 +66,19 @@ public class AuthController : ApiControllerBase
         var result = await _authService.RegisterAsync(request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Registration not successful"));
-        return Ok(ApiResponse.SuccessResponse("Registration successful"));
+        return Ok(ApiResponse.SuccessResponse(result.Message ?? "Registration successful"));
     }
 
     [HttpPost("forgot-password")]
     [SwaggerOperation(Summary = "Forgot password (step 1)", Description = "Request OTP with purpose ForgotPassword. Then call reset-password with the OTP.")]
-    [SwaggerResponse(200, "OTP sent to email", typeof(ApiResponse))]
+    [SwaggerResponse(200, "Forgot password successful", typeof(ApiResponse))]
+    [SwaggerResponse(400, "Forgot password not successful", typeof(ApiResponse))]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
     {
         var result = await _authService.ForgotPasswordAsync(request);
         if (!result.Success)
-            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "OTP not sent to email"));
-        return Ok(ApiResponse.SuccessResponse("OTP sent to email successfully"));
+            return BadRequest(ApiResponse.ErrorResponse(result.Message));
+        return Ok(ApiResponse.SuccessResponse(result.Message));
     }
 
     [HttpPost("reset-password")]
@@ -89,7 +90,7 @@ public class AuthController : ApiControllerBase
         var result = await _authService.ResetPasswordAsync(request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Password not reset"));
-        return Ok(ApiResponse.SuccessResponse("Password reset successfully"));
+        return Ok(ApiResponse.SuccessResponse(result.Message ?? "Password reset successfully"));
     }
 
     [HttpPost("change-password")]
@@ -107,7 +108,7 @@ public class AuthController : ApiControllerBase
         var result = await _authService.ChangePasswordAsync(userId.Value, request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Password not changed"));
-        return Ok(ApiResponse.SuccessResponse("Password changed successfully"));
+        return Ok(ApiResponse.SuccessResponse(result.Message ?? "Password changed successfully"));
     }
 
     [HttpPost("refresh-token")]
@@ -119,7 +120,7 @@ public class AuthController : ApiControllerBase
         var result = await _authService.RefreshTokenAsync(request);
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Refresh token not refreshed"));
-        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, result.Message ?? "Login successful"));
     }
 
     [HttpPost("login-google")]
@@ -138,6 +139,6 @@ public class AuthController : ApiControllerBase
 
         if (!result.Success)
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Login not successful"));
-        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
+        return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, result.Message ?? "Login successful"));
     }
 }
