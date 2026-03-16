@@ -5,15 +5,29 @@ namespace BonddyPlatform.Services.Interfaces;
 
 public interface IBookingService
 {
-    /// <summary>CS/Admin tạo booking cho một trip</summary>
-    Task<BookingResponseDto> CreateForTripAsync(Guid createdByUserId, BookingCreateRequestDto dto);
+    /// <summary>
+    /// Buddy tạo booking từ TripRequest (sau khi đã trao đổi trong chat).
+    /// Tự động gửi booking card vào chat room giữa buddy và traveler.
+    /// </summary>
+    Task<BookingResponseDto> CreateFromTripRequestAsync(Guid buddyUserId, Guid tripRequestId, BookingCreateFromTripRequestDto dto);
 
-    /// <summary>Lấy toàn bộ bookings của một trip</summary>
-    Task<IEnumerable<BookingResponseDto>> GetByTripIdAsync(Guid tripId);
+    /// <summary>
+    /// Traveler confirm booking → chuyển sang PendingPayment, set PaymentDeadline.
+    /// </summary>
+    Task<BookingResponseDto> ConfirmByTravelerAsync(Guid travelerUserId, Guid bookingId);
 
-    /// <summary>Lấy chi tiết một booking</summary>
+    /// <summary>Lấy chi tiết một booking.</summary>
     Task<BookingResponseDto?> GetByIdAsync(Guid id);
 
-    /// <summary>CS/Admin cập nhật trạng thái booking (state machine)</summary>
+    /// <summary>Lấy toàn bộ bookings của một trip.</summary>
+    Task<IEnumerable<BookingResponseDto>> GetByTripIdAsync(Guid tripId);
+
+    /// <summary>Lấy tất cả bookings của traveler đang đăng nhập.</summary>
+    Task<IEnumerable<BookingResponseDto>> GetMyBookingsAsTravelerAsync(Guid travelerUserId);
+
+    /// <summary>Lấy tất cả bookings của buddy đang đăng nhập.</summary>
+    Task<IEnumerable<BookingResponseDto>> GetMyBookingsAsBuddyAsync(Guid buddyUserId);
+
+    /// <summary>CS/Admin cập nhật trạng thái booking (state machine).</summary>
     Task<BookingResponseDto?> UpdateStatusAsync(Guid id, BookingStatus newStatus);
 }

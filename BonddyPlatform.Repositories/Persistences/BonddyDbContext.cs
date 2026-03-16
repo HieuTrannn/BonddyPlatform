@@ -17,7 +17,6 @@ namespace BonddyPlatform.Repositories.Persistences
         public DbSet<TripRequest> TripRequests => Set<TripRequest>();
         public DbSet<Buddy> Buddies => Set<Buddy>();
         public DbSet<Booking> Bookings => Set<Booking>();
-        public DbSet<BookingSurcharge> BookingSurcharges => Set<BookingSurcharge>();
         public DbSet<Payment> Payments => Set<Payment>();
         public DbSet<Review> Reviews => Set<Review>();
         public DbSet<Incident> Incidents => Set<Incident>();
@@ -191,46 +190,43 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.ToTable("Bookings");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.BaseRatePerHour).HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(x => x.SubtotalAmount).HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(x => x.SurchargesAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.BookedDate).HasColumnType("date").IsRequired();
+                entity.Property(x => x.BookedStartTime).HasColumnType("time").IsRequired();
+                entity.Property(x => x.Price).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Currency).HasMaxLength(10).IsRequired();
                 entity.Property(x => x.PlatformFeeAmount).HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(x => x.TipAmount).HasColumnType("decimal(18,2)").IsRequired();
                 entity.Property(x => x.TotalAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Includes).HasMaxLength(2000);
+                entity.Property(x => x.Excludes).HasMaxLength(2000);
+                entity.Property(x => x.NoteForCustomer).HasMaxLength(500);
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.CreatedAt).IsRequired();
 
                 entity.HasOne(x => x.Trip)
                     .WithMany()
                     .HasForeignKey(x => x.TripId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.TripRequest)
+                    .WithMany()
+                    .HasForeignKey(x => x.TripRequestId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.Buddy)
                     .WithMany()
                     .HasForeignKey(x => x.BuddyId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasOne(x => x.CreatedByUser)
+                entity.HasOne(x => x.TravelerUser)
                     .WithMany()
-                    .HasForeignKey(x => x.CreatedByUserId)
+                    .HasForeignKey(x => x.TravelerUserId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(x => x.TripId);
-                entity.HasIndex(x => new { x.Status, x.CreatedAt });
-            });
-
-            modelBuilder.Entity<BookingSurcharge>(entity =>
-            {
-                entity.ToTable("BookingSurcharges");
-                entity.HasKey(x => x.Id);
-                entity.Property(x => x.Type).HasMaxLength(50).IsRequired();
-                entity.Property(x => x.Amount).HasColumnType("decimal(18,2)").IsRequired();
-                entity.Property(x => x.Note).HasMaxLength(200);
-
-                entity.HasOne(x => x.Booking)
-                    .WithMany(b => b.Surcharges)
-                    .HasForeignKey(x => x.BookingId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(x => x.TripRequestId).IsUnique();
+                entity.HasIndex(x => new { x.TravelerUserId, x.Status });
+                entity.HasIndex(x => new { x.BuddyId, x.Status });
+                entity.HasIndex(x => x.Status);
             });
 
             modelBuilder.Entity<Payment>(entity =>
@@ -393,6 +389,11 @@ namespace BonddyPlatform.Repositories.Persistences
                     .WithMany()
                     .HasForeignKey(x => x.ReplyToMessageId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Booking>()
+                    .WithMany()
+                    .HasForeignKey(x => x.BookingId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasIndex(x => new { x.RoomId, x.CreatedAt });
             });

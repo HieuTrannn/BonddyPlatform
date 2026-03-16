@@ -77,4 +77,28 @@ public class TripsController : ApiControllerBase
         if (trip.TravelerUserId != travelerUserId) return Unauthorized(ApiResponse.ErrorResponse("You are not allowed to view this trip."));
         return Ok(ApiResponse<TripResponseDto>.SuccessResponse(trip, "Trip fetched successfully"));
     }
+
+    /// <summary>
+    /// Traveler xóa trip (soft delete — chỉ đổi status sang Deleted).
+    /// Không cho phép xóa nếu đang có booking active.
+    /// DELETE /api/Trips/{id}
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = nameof(Role.User))]
+    [SwaggerOperation(Summary = "Delete trip (soft delete)", Description = "Sets trip status to Deleted. Not allowed if trip has active bookings.")]
+    [SwaggerResponse(200, "Deleted successfully", typeof(ApiResponse))]
+    [SwaggerResponse(400, "Has active bookings", typeof(ApiResponse))]
+    [SwaggerResponse(404, "Not found", typeof(ApiResponse))]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        try
+        {
+            var travelerUserId = GetCurrentUserIdOrThrow();
+            await _tripService.DeleteAsync(id, travelerUserId);
+            return Ok(ApiResponse.SuccessResponse("Trip deleted successfully."));
+        }
+        catch (KeyNotFoundException ex)        { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
+        catch (UnauthorizedAccessException)   { return Forbid(); }
+        catch (InvalidOperationException ex)   { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
+    }
 }

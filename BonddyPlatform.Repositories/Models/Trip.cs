@@ -29,5 +29,7 @@ public enum TripStatus
     Active = 1,
     Deactivate = 2,
     Expired = 3,
+    /// <summary>Traveler đã xóa trip — soft delete, dữ liệu vẫn còn trong DB.</summary>
+    Deleted = 4,
 }
 
