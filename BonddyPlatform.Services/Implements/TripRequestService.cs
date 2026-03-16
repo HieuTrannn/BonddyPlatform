@@ -24,7 +24,7 @@ public class TripRequestService : ITripRequestService
         var trip = await _uow.Trips.GetByIdAsync(dto.TripId)
             ?? throw new KeyNotFoundException("Trip not found.");
 
-        if (trip.Status != TripStatus.Active)
+        if (trip.Status != TripStatus.Open)
             throw new InvalidOperationException("This trip is no longer accepting requests.");
 
         // Prevent duplicate request from the same buddy

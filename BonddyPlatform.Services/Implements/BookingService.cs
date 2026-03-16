@@ -173,9 +173,9 @@ public class BookingService : IBookingService
         {
             // Lock the Trip — no more requests
             var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
-            if (trip is not null && trip.Status == TripStatus.Active)
+            if (trip is not null && trip.Status == TripStatus.Open)
             {
-                trip.Status    = TripStatus.Deactivate;
+                trip.Status    = TripStatus.Closed;
                 trip.UpdatedAt = DateTime.UtcNow;
                 _uow.Trips.Update(trip);
             }
@@ -194,7 +194,7 @@ public class BookingService : IBookingService
         {
             // Re-activate the trip if this was the only active booking
             var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
-            if (trip is not null && trip.Status == TripStatus.Deactivate)
+            if (trip is not null && trip.Status == TripStatus.Closed)
             {
                 var otherActive = (await _uow.Bookings.GetByTripIdAsync(trip.Id))
                     .Any(b => b.Id != id &&
@@ -204,7 +204,7 @@ public class BookingService : IBookingService
                                        or BookingStatus.InProgress);
                 if (!otherActive)
                 {
-                    trip.Status    = TripStatus.Active;
+                    trip.Status    = TripStatus.Open;
                     trip.UpdatedAt = DateTime.UtcNow;
                     _uow.Trips.Update(trip);
                 }

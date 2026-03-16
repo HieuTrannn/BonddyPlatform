@@ -21,6 +21,19 @@ public class ChatController : ApiControllerBase
     }
 
     /// <summary>
+    /// Get all chat rooms for the current user.
+    /// </summary>
+    [HttpGet("rooms")]
+    [SwaggerOperation(Summary = "Get all chat rooms of current user")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<ChatRoomDto>>))]
+    public async Task<IActionResult> GetMyRooms()
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        var rooms = await _chatService.GetRoomsForUserAsync(userId);
+        return Ok(ApiResponse<IEnumerable<ChatRoomDto>>.SuccessResponse(rooms, "Chat rooms fetched successfully"));
+    }
+
+    /// <summary>
     /// Get or create chat room for a trip.
     /// </summary>
     [HttpPost("trips/{tripId:guid}/room")]

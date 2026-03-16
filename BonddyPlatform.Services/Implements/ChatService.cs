@@ -156,6 +156,20 @@ public class ChatService : IChatService
         return MapMessageToDto(message);
     }
 
+        public async Task<IEnumerable<ChatRoomDto>> GetRoomsForUserAsync(Guid userId)
+        {
+            var query = _uow.ChatRooms
+                .GetQueryable()
+                .Include(r => r.Participants)
+                .Where(r => r.Participants.Any(p => p.UserId == userId));
+
+            var rooms = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return rooms.Select(MapRoomToDto);
+        }
+
     private static ChatRoomDto MapRoomToDto(ChatRoom room) => new()
     {
         Id = room.Id,
