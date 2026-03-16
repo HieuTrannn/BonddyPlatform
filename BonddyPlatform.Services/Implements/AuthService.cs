@@ -29,7 +29,7 @@ public class AuthService : IAuthService
             return (false, "Email or password is incorrect", null);
 
         if (!user.IsEmailVerified)
-            return (false, "Please verify your email first. Check your inbox for the OTP.", null);
+            return (false, "Please verify your email first.", null);
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
             return (false, "Email or password is incorrect", null);
@@ -265,9 +265,30 @@ public class AuthService : IAuthService
     public async Task<(bool Success, string? Message)> ForgotPasswordAsync(ForgotPasswordRequestDto request)
     {
         var user = await _uow.Users.GetByEmailAsync(request.Email);
-        if (user == null)
-            return (true, "If the email exists, an OTP has been sent.");
-        return (true, "If the email exists, request OTP with purpose ForgotPassword then reset password.");
+        if (user != null)
+        {
+            var otpCode = GenerateOtpCode();
+            var otp = new OtpVerification
+            {
+                Email = request.Email,
+                OtpCode = otpCode,
+                Purpose = OtpPurpose.ForgotPassword,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(OtpExpiryMinutes)
+            };
+            await _uow.OtpVerifications.AddAsync(otp);
+            await _uow.SaveChangesAsync();
+
+            var subject = "Reset your password - Bonddy Platform";
+            var body = EmailTemplates.BuildOtpEmailHtml(
+                otpCode: otpCode,
+                expiresInMinutes: OtpExpiryMinutes,
+                purposeTitle: "Đặt lại mật khẩu",
+                recipientName: user.FullName);
+            await _emailSender.SendEmailAsync(request.Email, subject, body);
+        }
+
+        // Always return the same response to avoid leaking whether the email exists.
+        return (true, "If the email exists, an OTP has been sent.");
     }
 
     public async Task<(bool Success, string? Message)> ResetPasswordAsync(ResetPasswordRequestDto request)
