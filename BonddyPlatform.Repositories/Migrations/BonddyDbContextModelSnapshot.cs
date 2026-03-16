@@ -222,6 +222,37 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("ChatRoomParticipants", (string)null);
                 });
 
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoomUserState", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ChatRoomUserStates", (string)null);
+                });
+
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Contact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -376,6 +407,49 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.HasIndex("MessageId");
 
                     b.ToTable("MessageAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataJson")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "IsRead", "CreatedAt");
+
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.OtpVerification", b =>
@@ -834,6 +908,25 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoomUserState", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.ChatRoom", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Room");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Incident", b =>
                 {
                     b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
@@ -893,6 +986,17 @@ namespace BonddyPlatform.Repositories.Migrations
                         .IsRequired();
 
                     b.Navigation("Message");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.Notification", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Payment", b =>

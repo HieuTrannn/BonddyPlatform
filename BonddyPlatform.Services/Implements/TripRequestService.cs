@@ -2,6 +2,7 @@ using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Services.DTOs.TripDtos;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -9,11 +10,15 @@ public class TripRequestService : ITripRequestService
 {
     private readonly IUnitOfWork _uow;
     private readonly IChatService _chatService;
+    private readonly IEmailSender _emailSender;
+    private readonly INotificationService _notificationService;
 
-    public TripRequestService(IUnitOfWork uow, IChatService chatService)
+    public TripRequestService(IUnitOfWork uow, IChatService chatService, IEmailSender emailSender, INotificationService notificationService)
     {
         _uow = uow;
         _chatService = chatService;
+        _emailSender = emailSender;
+        _notificationService = notificationService;
     }
 
     public async Task<TripRequestResponseDto> CreateAsync(Guid buddyUserId, TripRequestCreateDto dto)
@@ -52,10 +57,38 @@ public class TripRequestService : ITripRequestService
         await _uow.TripRequests.AddAsync(entity);
         await _uow.SaveChangesAsync();
 
+        // Send email notification to traveler
+        await SendTravelerEmailAsync(trip, buddy, entity, dto);
+
         // Auto-create direct chat room between traveler and buddy for this request
         var travelerUserId = trip.TravelerUserId;
         var buddyProfileUserId = buddy.UserId;
         var room = await _chatService.GetOrCreateDirectChatAsync(entity.Id, travelerUserId, buddyProfileUserId);
+
+        // Create a dedicated "TripRequestCreated" notification for the traveler (separate from chat messages)
+        try
+        {
+            var buddyUser = await _uow.Users.GetByIdAsync(buddy.UserId);
+            var buddyName = buddyUser?.FullName ?? "A buddy";
+            var offerText = dto.IsInboxOnly
+                ? "Inbox only"
+                : $"{dto.OfferedPrice:0.##}";
+
+            var title = "New trip request";
+            var body = $"{buddyName} sent a request for your trip to {trip.City} ({trip.StartDate:yyyy-MM-dd}). Offer: {offerText}.";
+            var dataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                tripId = trip.Id,
+                tripRequestId = entity.Id,
+                chatRoomId = room.Id
+            });
+
+            await _notificationService.CreateAsync(travelerUserId, NotificationType.TripRequestCreated, title, body, dataJson);
+        }
+        catch
+        {
+            // Notification is non-critical; do not block main flow.
+        }
 
         // Send the first message in chat summarizing the trip and the offer
         var introLines = new List<string>
@@ -154,6 +187,46 @@ public class TripRequestService : ITripRequestService
             BuddyUserId = buddyUserId,
             BuddyName = request.Buddy.User?.FullName ?? string.Empty
         };
+    }
+
+    private async Task SendTravelerEmailAsync(Trip trip, Buddy buddy, TripRequest request, TripRequestCreateDto dto)
+    {
+        var traveler = await _uow.Users.GetByIdAsync(trip.TravelerUserId);
+        var buddyUser = await _uow.Users.GetByIdAsync(buddy.UserId);
+        if (traveler is null || string.IsNullOrWhiteSpace(traveler.Email))
+        {
+            return;
+        }
+
+        var subject = $"[Bonddy] New buddy request for your trip to {trip.City}";
+
+        var buddyName = buddyUser?.FullName ?? "A Bonddy buddy";
+        var travelerName = traveler.FullName;
+
+        var body = EmailTemplates.BuildNewTripRequestEmailHtml(
+            travelerName: travelerName,
+            buddyName: buddyName,
+            city: trip.City,
+            startDate: trip.StartDate,
+            startTime: trip.StartTime,
+            adults: trip.Adults,
+            children: trip.Children,
+            durationHours: trip.DurationHours,
+            isInboxOnly: dto.IsInboxOnly,
+            offeredPrice: dto.OfferedPrice,
+            buddyNote: dto.Note,
+            tripId: trip.Id,
+            createdAtUtc: DateTime.UtcNow);
+
+        try
+        {
+            await _emailSender.SendEmailAsync(traveler.Email, subject, body);
+        }
+        catch
+        {
+            // Email failures should not block trip request creation or chat setup.
+            // Consider logging this exception via a logging service in the future.
+        }
     }
 
     private static TripRequestResponseDto MapToDto(

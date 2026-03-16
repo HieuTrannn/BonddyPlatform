@@ -155,7 +155,15 @@ public class AuthService : IAuthService
             expiresInMinutes: OtpExpiryMinutes,
             purposeTitle: purposeTitle,
             recipientName: null);
-        await _emailSender.SendEmailAsync(request.Email, subject, body);
+
+        try
+        {
+            await _emailSender.SendEmailAsync(request.Email, subject, body);
+        }
+        catch
+        {
+            return (false, "Không thể gửi OTP tới email, vui lòng thử lại sau");
+        }
 
         return (true, "OTP has been sent to your email.");
     }
@@ -258,7 +266,15 @@ public class AuthService : IAuthService
             expiresInMinutes: OtpExpiryMinutes,
             purposeTitle: "Xác thực email",
             recipientName: request.FullName);
-        await _emailSender.SendEmailAsync(request.Email, subject, body);
+
+        try
+        {
+            await _emailSender.SendEmailAsync(request.Email, subject, body);
+        }
+        catch
+        {
+            return (false, "Không thể gửi OTP tới email, vui lòng thử lại sau");
+        }
 
         return (true, "Registration successful. Check your email for the verification OTP");
     }

@@ -10,10 +10,12 @@ namespace BonddyPlatform.Services.Implements;
 public class ChatService : IChatService
 {
     private readonly IUnitOfWork _uow;
+    private readonly INotificationService _notificationService;
 
-    public ChatService(IUnitOfWork uow)
+    public ChatService(IUnitOfWork uow, INotificationService notificationService)
     {
         _uow = uow;
+        _notificationService = notificationService;
     }
 
     public async Task<ChatRoomDto> GetOrCreateTripRoomAsync(Guid tripId, Guid travelerUserId)
@@ -90,6 +92,50 @@ public class ChatService : IChatService
         return MapRoomToDto(room);
     }
 
+    public async Task<ChatRoomDto> GetOrCreateDirectChatByBuddyUserIdAsync(Guid travelerUserId, Guid buddyUserId)
+    {
+        // Try to find any DirectBuddy room between these two users (regardless of TripRequest)
+        var existing = await _uow.ChatRooms
+            .GetQueryable()
+            .Include(r => r.Participants)
+            .Where(r => r.RoomType == ChatRoomType.DirectBuddy && r.BuddyUserId == buddyUserId)
+            .Where(r => r.Participants.Any(p => p.UserId == travelerUserId))
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (existing != null)
+            return MapRoomToDto(existing);
+
+        // Create a new direct buddy room without TripRequest
+        var room = new ChatRoom
+        {
+            RoomType = ChatRoomType.DirectBuddy,
+            TripRequestId = null,
+            BuddyUserId = buddyUserId,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _uow.ChatRooms.AddAsync(room);
+        await _uow.SaveChangesAsync();
+
+        await _uow.ChatParticipants.AddAsync(new ChatRoomParticipant
+        {
+            RoomId = room.Id,
+            UserId = travelerUserId,
+            RoleInRoom = RoomParticipantRole.Traveler,
+            JoinedAt = DateTime.UtcNow
+        });
+        await _uow.ChatParticipants.AddAsync(new ChatRoomParticipant
+        {
+            RoomId = room.Id,
+            UserId = buddyUserId,
+            RoleInRoom = RoomParticipantRole.Buddy,
+            JoinedAt = DateTime.UtcNow
+        });
+        await _uow.SaveChangesAsync();
+
+        return MapRoomToDto(room);
+    }
+
     public async Task<bool> IsUserInRoomAsync(Guid roomId, Guid userId)
     {
         return await _uow.ChatParticipants.IsUserInRoomAsync(roomId, userId);
@@ -120,17 +166,40 @@ public class ChatService : IChatService
             throw new InvalidOperationException("User is not a participant of this room.");
         }
 
+        var contentText = request.ContentText.Trim();
+        if (string.IsNullOrWhiteSpace(contentText))
+            throw new InvalidOperationException("Message content cannot be empty.");
+
         var message = new Message
         {
             RoomId = roomId,
             SenderUserId = senderUserId,
             ContentType = MessageContentType.Text,
-            ContentText = request.ContentText.Trim(),
+            ContentText = contentText,
             CreatedAt = DateTime.UtcNow
         };
 
         await _uow.Messages.AddAsync(message);
         await _uow.SaveChangesAsync();
+
+        // Create notifications for other participants in the room
+        var room = await _uow.ChatRooms.GetByIdWithParticipantsAsync(roomId);
+        if (room != null)
+        {
+            var dataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                roomId,
+                messageId = message.Id
+            });
+
+            var title = "New message";
+            var body = contentText.Length > 160 ? contentText[..160] + "..." : contentText;
+
+            foreach (var p in room.Participants.Where(p => p.UserId != senderUserId))
+            {
+                await _notificationService.CreateAsync(p.UserId, NotificationType.ChatMessage, title, body, dataJson);
+            }
+        }
 
         return MapMessageToDto(message);
     }
@@ -152,6 +221,28 @@ public class ChatService : IChatService
 
         await _uow.Messages.AddAsync(message);
         await _uow.SaveChangesAsync();
+
+        // Notify other participants that a booking card was sent
+        var room = await _uow.ChatRooms.GetByIdWithParticipantsAsync(roomId);
+        if (room != null)
+        {
+            var dataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                roomId,
+                messageId = message.Id,
+                bookingId
+            });
+
+            foreach (var p in room.Participants.Where(p => p.UserId != senderUserId))
+            {
+                await _notificationService.CreateAsync(
+                    p.UserId,
+                    NotificationType.System,
+                    "New booking offer",
+                    "A booking offer was sent in chat.",
+                    dataJson);
+            }
+        }
 
         return MapMessageToDto(message);
     }
