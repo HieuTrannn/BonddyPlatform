@@ -28,43 +28,69 @@ namespace BonddyPlatform.Repositories.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("BaseRatePerHour")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("BookedAdults")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("BookedChildren")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("BookedDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("BookedDurationHours")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("BookedStartTime")
+                        .HasColumnType("time");
 
                     b.Property<Guid>("BuddyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ChatRoomId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
-                    b.Property<int>("DurationMinutes")
-                        .HasColumnType("integer");
+                    b.Property<string>("Excludes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Includes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("NoteForCustomer")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("PaymentDeadline")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("PlatformFeeAmount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("ScheduledStartTime")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("SubtotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("SurchargesAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("TipAmount")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("TravelerUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("TripId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TripRequestId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -72,43 +98,18 @@ namespace BonddyPlatform.Repositories.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BuddyId");
-
-                    b.HasIndex("CreatedByUserId");
+                    b.HasIndex("Status");
 
                     b.HasIndex("TripId");
 
-                    b.HasIndex("Status", "CreatedAt");
+                    b.HasIndex("TripRequestId")
+                        .IsUnique();
+
+                    b.HasIndex("BuddyId", "Status");
+
+                    b.HasIndex("TravelerUserId", "Status");
 
                     b.ToTable("Bookings", (string)null);
-                });
-
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BookingSurcharge", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("BookingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BookingId");
-
-                    b.ToTable("BookingSurcharges", (string)null);
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Buddy", b =>
@@ -304,6 +305,9 @@ namespace BonddyPlatform.Repositories.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("BookingId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ContentText")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
@@ -330,6 +334,8 @@ namespace BonddyPlatform.Repositories.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
 
                     b.HasIndex("ReplyToMessageId");
 
@@ -761,34 +767,31 @@ namespace BonddyPlatform.Repositories.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BonddyPlatform.Repositories.Models.User", "CreatedByUser")
+                    b.HasOne("BonddyPlatform.Repositories.Models.User", "TravelerUser")
                         .WithMany()
-                        .HasForeignKey("CreatedByUserId")
+                        .HasForeignKey("TravelerUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BonddyPlatform.Repositories.Models.Trip", "Trip")
                         .WithMany()
                         .HasForeignKey("TripId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.TripRequest", "TripRequest")
+                        .WithMany()
+                        .HasForeignKey("TripRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Buddy");
 
-                    b.Navigation("CreatedByUser");
+                    b.Navigation("TravelerUser");
 
                     b.Navigation("Trip");
-                });
 
-            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BookingSurcharge", b =>
-                {
-                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
-                        .WithMany("Surcharges")
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Booking");
+                    b.Navigation("TripRequest");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Buddy", b =>
@@ -852,6 +855,11 @@ namespace BonddyPlatform.Repositories.Migrations
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Message", b =>
                 {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Booking", null)
+                        .WithMany()
+                        .HasForeignKey("BookingId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("BonddyPlatform.Repositories.Models.Message", "ReplyToMessage")
                         .WithMany()
                         .HasForeignKey("ReplyToMessageId")
@@ -972,8 +980,6 @@ namespace BonddyPlatform.Repositories.Migrations
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Booking", b =>
                 {
                     b.Navigation("Payment");
-
-                    b.Navigation("Surcharges");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>

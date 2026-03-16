@@ -135,6 +135,27 @@ public class ChatService : IChatService
         return MapMessageToDto(message);
     }
 
+    public async Task<MessageDto> SendBookingCardAsync(Guid roomId, Guid senderUserId, Guid bookingId)
+    {
+        if (!await _uow.ChatParticipants.IsUserInRoomAsync(roomId, senderUserId))
+            throw new InvalidOperationException("User is not a participant of this room.");
+
+        var message = new Message
+        {
+            RoomId = roomId,
+            SenderUserId = senderUserId,
+            ContentType = MessageContentType.BookingCard,
+            ContentText = null,
+            BookingId = bookingId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _uow.Messages.AddAsync(message);
+        await _uow.SaveChangesAsync();
+
+        return MapMessageToDto(message);
+    }
+
     private static ChatRoomDto MapRoomToDto(ChatRoom room) => new()
     {
         Id = room.Id,
@@ -151,6 +172,7 @@ public class ChatService : IChatService
         SenderUserId = message.SenderUserId,
         ContentType = message.ContentType.ToString(),
         ContentText = message.ContentText,
+        BookingId = message.BookingId,
         CreatedAt = message.CreatedAt
     };
 }

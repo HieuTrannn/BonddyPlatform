@@ -11,4 +11,10 @@ public interface ITripService
     Task<PagedResultDto<TripResponseDto>> GetTripsForOpsAsync(TripSearchRequestDto request);
     Task<PagedResultDto<TripResponseDto>> GetOpenTripsForBuddyAsync(TripSearchRequestDto request);
     Task<TripResponseDto?> GetByIdAsync(Guid id);
+
+    /// <summary>
+    /// Traveler xóa trip — soft delete, chỉ cập nhật status thành Deleted.
+    /// Không cho xóa nếu trip đang có booking active.
+    /// </summary>
+    Task DeleteAsync(Guid tripId, Guid requesterId);
 }

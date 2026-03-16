@@ -7,67 +7,131 @@ namespace BonddyPlatform.Services.Implements;
 
 public class BookingService : IBookingService
 {
-    private readonly IUnitOfWork _uow;
+    private const double PlatformFeeRate = 0.10;          // 10% platform fee
+    private const int PaymentDeadlineHours = 24;           // 24h for traveler to pay
 
-    // Transition rules: key = current status, value = allowed next statuses
-    private static readonly Dictionary<BookingStatus, HashSet<BookingStatus>> _allowedTransitions = new()
+    private readonly IUnitOfWork _uow;
+    private readonly IChatService _chatService;
+
+    // State machine: key = current status, value = allowed next statuses
+    private static readonly Dictionary<BookingStatus, HashSet<BookingStatus>> AllowedTransitions = new()
     {
-        [BookingStatus.Pending]    = new() { BookingStatus.Confirmed, BookingStatus.Cancelled },
-        [BookingStatus.Confirmed]  = new() { BookingStatus.InProgress, BookingStatus.Cancelled },
-        [BookingStatus.InProgress] = new() { BookingStatus.Completed, BookingStatus.Cancelled },
-        [BookingStatus.Completed]  = new(),
-        [BookingStatus.Cancelled]  = new()
+        [BookingStatus.PendingCustomerConfirm] = new() { BookingStatus.Cancelled },
+        [BookingStatus.PendingPayment]         = new() { BookingStatus.Confirmed, BookingStatus.CancelledByTimeout, BookingStatus.Cancelled },
+        [BookingStatus.Confirmed]              = new() { BookingStatus.InProgress, BookingStatus.Cancelled },
+        [BookingStatus.InProgress]             = new() { BookingStatus.Completed, BookingStatus.Cancelled },
+        [BookingStatus.Completed]              = new(),
+        [BookingStatus.Cancelled]              = new(),
+        [BookingStatus.CancelledByTimeout]     = new()
     };
 
-    public BookingService(IUnitOfWork uow)
+    public BookingService(IUnitOfWork uow, IChatService chatService)
     {
         _uow = uow;
+        _chatService = chatService;
     }
 
-    public async Task<BookingResponseDto> CreateForTripAsync(Guid createdByUserId, BookingCreateRequestDto dto)
-    {
-        var surchargesTotal = dto.Surcharges.Sum(s => s.Amount);
-        var subtotal = dto.BaseRatePerHour * (dto.DurationMinutes / 60m);
-        var total = subtotal + surchargesTotal + dto.PlatformFeeAmount + dto.TipAmount;
+    // ─── CreateFromTripRequestAsync ──────────────────────────────────────────
 
+    public async Task<BookingResponseDto> CreateFromTripRequestAsync(
+        Guid buddyUserId, Guid tripRequestId, BookingCreateFromTripRequestDto dto)
+    {
+        // 1. Load TripRequest with Trip + Buddy
+        var tripRequest = await _uow.TripRequests.GetWithDetailsAsync(tripRequestId)
+            ?? throw new KeyNotFoundException("TripRequest not found.");
+
+        var buddy = tripRequest.Buddy;
+        if (buddy.UserId != buddyUserId)
+            throw new UnauthorizedAccessException("Only the buddy who sent this request can create a booking.");
+
+        var trip = tripRequest.Trip;
+
+        // 2. One booking per TripRequest
+        var existing = await _uow.Bookings.GetByTripRequestIdAsync(tripRequestId);
+        if (existing is not null)
+            throw new InvalidOperationException("A booking already exists for this trip request.");
+
+        // 3. Get chat room (created when buddy sent the TripRequest)
+        var chatRooms = await _uow.ChatRooms.FindAsync(r => r.TripRequestId == tripRequestId);
+        var chatRoomId = chatRooms.FirstOrDefault()?.Id;
+
+        // 4. Calculate amounts
+        var platformFee = Math.Round(dto.Price * (decimal)PlatformFeeRate, 2);
+        var total = dto.Price + platformFee;
+
+        // 5. Build Booking entity (snapshot from Trip + buddy's adjustments)
         var booking = new Booking
         {
-            TripId = dto.TripId,
-            BuddyId = dto.BuddyId,
-            CreatedByUserId = createdByUserId,
-            BaseRatePerHour = dto.BaseRatePerHour,
-            DurationMinutes = dto.DurationMinutes,
-            SubtotalAmount = subtotal,
-            SurchargesAmount = surchargesTotal,
-            PlatformFeeAmount = dto.PlatformFeeAmount,
-            TipAmount = dto.TipAmount,
-            TotalAmount = total,
-            ScheduledStartTime = dto.ScheduledStartTime,
-            Status = BookingStatus.Pending,
-            CreatedAt = DateTime.UtcNow,
-            Surcharges = dto.Surcharges.Select(s => new BookingSurcharge
-            {
-                Type = s.Type,
-                Amount = s.Amount,
-                Note = s.Note
-            }).ToList()
+            TripId           = trip.Id,
+            TripRequestId    = tripRequestId,
+            BuddyId          = buddy.Id,
+            TravelerUserId   = trip.TravelerUserId,
+            ChatRoomId       = chatRoomId,
+
+            // Booked (buddy-adjusted)
+            BookedDate        = dto.BookedDate,
+            BookedStartTime   = dto.BookedStartTime,
+            BookedDurationHours = dto.BookedDurationHours,
+            BookedAdults      = dto.BookedAdults,
+            BookedChildren    = dto.BookedChildren,
+
+            // Price
+            Price             = dto.Price,
+            Currency          = dto.Currency,
+            PlatformFeeAmount = platformFee,
+            TotalAmount       = total,
+
+            Includes          = dto.Includes,
+            Excludes          = dto.Excludes,
+            NoteForCustomer   = dto.NoteForCustomer,
+
+            Status    = BookingStatus.PendingCustomerConfirm,
+            CreatedAt = DateTime.UtcNow
         };
 
         await _uow.Bookings.AddAsync(booking);
-
-        // Deactivate trip once a booking is created (no more requests accepted)
-        var trip = await _uow.Trips.GetByIdAsync(dto.TripId);
-        if (trip is not null && trip.Status == TripStatus.Active)
-        {
-            trip.Status = TripStatus.Deactivate;
-            trip.UpdatedAt = DateTime.UtcNow;
-            _uow.Trips.Update(trip);
-        }
-
         await _uow.SaveChangesAsync();
+
+        // 6. Send BookingCard message into the chat room
+        if (chatRoomId.HasValue)
+        {
+            await _chatService.SendBookingCardAsync(chatRoomId.Value, buddyUserId, booking.Id);
+        }
 
         var full = await _uow.Bookings.GetByIdWithDetailsAsync(booking.Id);
         return ToDto(full!);
+    }
+
+    // ─── ConfirmByTravelerAsync ───────────────────────────────────────────────
+
+    public async Task<BookingResponseDto> ConfirmByTravelerAsync(Guid travelerUserId, Guid bookingId)
+    {
+        var booking = await _uow.Bookings.GetByIdWithDetailsAsync(bookingId)
+            ?? throw new KeyNotFoundException("Booking not found.");
+
+        if (booking.TravelerUserId != travelerUserId)
+            throw new UnauthorizedAccessException("Only the traveler can confirm this booking.");
+
+        if (booking.Status != BookingStatus.PendingCustomerConfirm)
+            throw new InvalidOperationException(
+                $"Booking cannot be confirmed from status '{booking.Status}'.");
+
+        booking.Status          = BookingStatus.PendingPayment;
+        booking.PaymentDeadline = DateTime.UtcNow.AddHours(PaymentDeadlineHours);
+        booking.UpdatedAt       = DateTime.UtcNow;
+
+        _uow.Bookings.Update(booking);
+        await _uow.SaveChangesAsync();
+
+        return ToDto(booking);
+    }
+
+    // ─── Queries ──────────────────────────────────────────────────────────────
+
+    public async Task<BookingResponseDto?> GetByIdAsync(Guid id)
+    {
+        var booking = await _uow.Bookings.GetByIdWithDetailsAsync(id);
+        return booking is null ? null : ToDto(booking);
     }
 
     public async Task<IEnumerable<BookingResponseDto>> GetByTripIdAsync(Guid tripId)
@@ -76,44 +140,71 @@ public class BookingService : IBookingService
         return bookings.Select(ToDto);
     }
 
-    public async Task<BookingResponseDto?> GetByIdAsync(Guid id)
+    public async Task<IEnumerable<BookingResponseDto>> GetMyBookingsAsTravelerAsync(Guid travelerUserId)
     {
-        var booking = await _uow.Bookings.GetByIdWithDetailsAsync(id);
-        return booking is null ? null : ToDto(booking);
+        var bookings = await _uow.Bookings.GetByTravelerUserIdAsync(travelerUserId);
+        return bookings.Select(ToDto);
     }
+
+    public async Task<IEnumerable<BookingResponseDto>> GetMyBookingsAsBuddyAsync(Guid buddyUserId)
+    {
+        var buddy = await _uow.Buddies.GetByUserIdAsync(buddyUserId)
+            ?? throw new KeyNotFoundException("Buddy profile not found.");
+
+        var bookings = await _uow.Bookings.GetByBuddyIdAsync(buddy.Id);
+        return bookings.Select(ToDto);
+    }
+
+    // ─── UpdateStatusAsync (CS / Admin) ──────────────────────────────────────
 
     public async Task<BookingResponseDto?> UpdateStatusAsync(Guid id, BookingStatus newStatus)
     {
         var booking = await _uow.Bookings.GetByIdWithDetailsAsync(id);
         if (booking is null) return null;
 
-        if (!_allowedTransitions.TryGetValue(booking.Status, out var allowed) || !allowed.Contains(newStatus))
+        if (!AllowedTransitions.TryGetValue(booking.Status, out var allowed) || !allowed.Contains(newStatus))
             throw new InvalidOperationException(
-                $"Cannot transition booking from {booking.Status} to {newStatus}.");
+                $"Cannot transition booking from '{booking.Status}' to '{newStatus}'.");
 
-        booking.Status = newStatus;
+        booking.Status    = newStatus;
         booking.UpdatedAt = DateTime.UtcNow;
 
-        // Sync Trip status when booking is Completed or Cancelled
-        var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
-        if (trip is not null)
+        if (newStatus == BookingStatus.Confirmed)
         {
-            if (newStatus == BookingStatus.Completed)
+            // Lock the Trip — no more requests
+            var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
+            if (trip is not null && trip.Status == TripStatus.Active)
             {
-                trip.Status = TripStatus.Expired;
+                trip.Status    = TripStatus.Deactivate;
                 trip.UpdatedAt = DateTime.UtcNow;
                 _uow.Trips.Update(trip);
             }
-            else if (newStatus == BookingStatus.Cancelled)
+        }
+        else if (newStatus == BookingStatus.Completed)
+        {
+            var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
+            if (trip is not null)
             {
-                // Reactivate trip if no other active bookings remain
+                trip.Status    = TripStatus.Expired;
+                trip.UpdatedAt = DateTime.UtcNow;
+                _uow.Trips.Update(trip);
+            }
+        }
+        else if (newStatus is BookingStatus.Cancelled or BookingStatus.CancelledByTimeout)
+        {
+            // Re-activate the trip if this was the only active booking
+            var trip = await _uow.Trips.GetByIdAsync(booking.TripId);
+            if (trip is not null && trip.Status == TripStatus.Deactivate)
+            {
                 var otherActive = (await _uow.Bookings.GetByTripIdAsync(trip.Id))
-                    .Any(b => b.Id != id && b.Status is BookingStatus.Pending
-                                         or BookingStatus.Confirmed
-                                         or BookingStatus.InProgress);
-                if (!otherActive && trip.Status == TripStatus.Deactivate)
+                    .Any(b => b.Id != id &&
+                              b.Status is BookingStatus.PendingCustomerConfirm
+                                       or BookingStatus.PendingPayment
+                                       or BookingStatus.Confirmed
+                                       or BookingStatus.InProgress);
+                if (!otherActive)
                 {
-                    trip.Status = TripStatus.Active;
+                    trip.Status    = TripStatus.Active;
                     trip.UpdatedAt = DateTime.UtcNow;
                     _uow.Trips.Update(trip);
                 }
@@ -125,32 +216,38 @@ public class BookingService : IBookingService
         return ToDto(booking);
     }
 
+    // ─── Mapping ──────────────────────────────────────────────────────────────
+
     private static BookingResponseDto ToDto(Booking b) => new()
     {
-        Id = b.Id,
-        TripId = b.TripId,
-        TripCity = b.Trip?.City ?? string.Empty,
-        BuddyId = b.BuddyId,
-        BuddyName = b.Buddy?.User?.FullName ?? string.Empty,
-        CreatedByUserId = b.CreatedByUserId,
-        CreatedByUserName = b.CreatedByUser?.FullName ?? string.Empty,
-        BaseRatePerHour = b.BaseRatePerHour,
-        DurationMinutes = b.DurationMinutes,
-        SubtotalAmount = b.SubtotalAmount,
-        SurchargesAmount = b.SurchargesAmount,
+        Id              = b.Id,
+        TripId          = b.TripId,
+        TripRequestId   = b.TripRequestId,
+        BuddyId         = b.BuddyId,
+        BuddyName       = b.Buddy?.User?.FullName ?? string.Empty,
+        BuddyAvatar     = b.Buddy?.User?.ProfilePicture,
+        TravelerUserId  = b.TravelerUserId,
+        TravelerName    = b.TravelerUser?.FullName ?? string.Empty,
+        ChatRoomId      = b.ChatRoomId,
+
+        BookedDate        = b.BookedDate,
+        BookedStartTime   = b.BookedStartTime,
+        BookedDurationHours = b.BookedDurationHours,
+        BookedAdults      = b.BookedAdults,
+        BookedChildren    = b.BookedChildren,
+
+        Price             = b.Price,
+        Currency          = b.Currency,
         PlatformFeeAmount = b.PlatformFeeAmount,
-        TipAmount = b.TipAmount,
-        TotalAmount = b.TotalAmount,
-        ScheduledStartTime = b.ScheduledStartTime,
-        Status = b.Status,
-        Surcharges = b.Surcharges.Select(s => new BookingSurchargeResponseDto
-        {
-            Id = s.Id,
-            Type = s.Type,
-            Amount = s.Amount,
-            Note = s.Note
-        }).ToList(),
-        CreatedAt = b.CreatedAt,
-        UpdatedAt = b.UpdatedAt
+        TotalAmount       = b.TotalAmount,
+
+        Includes          = b.Includes,
+        Excludes          = b.Excludes,
+        NoteForCustomer   = b.NoteForCustomer,
+
+        Status          = b.Status,
+        PaymentDeadline = b.PaymentDeadline,
+        CreatedAt       = b.CreatedAt,
+        UpdatedAt       = b.UpdatedAt
     };
 }

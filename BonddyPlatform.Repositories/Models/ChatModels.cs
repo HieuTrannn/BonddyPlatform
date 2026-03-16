@@ -68,6 +68,9 @@ public class Message
     public Guid? ReplyToMessageId { get; set; }
     public Message? ReplyToMessage { get; set; }
 
+    /// <summary>Set khi ContentType = BookingCard để FE render booking card.</summary>
+    public Guid? BookingId { get; set; }
+
     public ICollection<MessageAttachment> Attachments { get; set; } = new List<MessageAttachment>();
 }
 
@@ -107,5 +110,7 @@ public enum MessageContentType
     Text = 0,
     Image = 1,
     File = 2,
-    System = 3
+    System = 3,
+    /// <summary>Booking offer card sent by buddy; BookingId points to the Booking entity.</summary>
+    BookingCard = 4
 }

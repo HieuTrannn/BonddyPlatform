@@ -16,6 +16,8 @@ public class MessageDto
     public Guid SenderUserId { get; set; }
     public string ContentType { get; set; } = string.Empty;
     public string? ContentText { get; set; }
+    /// <summary>Non-null when ContentType = BookingCard.</summary>
+    public Guid? BookingId { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

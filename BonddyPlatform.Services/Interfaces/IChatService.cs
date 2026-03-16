@@ -19,4 +19,10 @@ public interface IChatService
     Task<PagedResultDto<MessageDto>> GetMessagesAsync(Guid roomId, int page, int pageSize);
 
     Task<MessageDto> SendMessageAsync(Guid roomId, Guid senderUserId, SendMessageRequestDto request);
+
+    /// <summary>
+    /// Sends a BookingCard message into the existing chat room.
+    /// senderUserId must already be a participant.
+    /// </summary>
+    Task<MessageDto> SendBookingCardAsync(Guid roomId, Guid senderUserId, Guid bookingId);
 }

@@ -67,7 +67,7 @@ public class TripService : ITripService
     public async Task<PagedResultDto<TripResponseDto>> GetMyTripsAsync(Guid travelerUserId, TripSearchRequestDto request)
     {
         var query = _uow.Trips.GetQueryable()
-            .Where(t => t.TravelerUserId == travelerUserId);
+            .Where(t => t.TravelerUserId == travelerUserId && t.Status != TripStatus.Deleted);
 
         query = ApplyFilters(query, request);
 
@@ -106,7 +106,7 @@ public class TripService : ITripService
     public async Task<PagedResultDto<TripResponseDto>> GetOpenTripsForBuddyAsync(TripSearchRequestDto request)
     {
         var query = _uow.Trips.GetQueryable()
-            .Where(t => t.Status == TripStatus.Active);
+            .Where(t => t.Status == TripStatus.Active);  // Deleted trips never appear here
 
         query = ApplyFilters(query, request);
 
@@ -127,6 +127,31 @@ public class TripService : ITripService
     {
         var entity = await _uow.Trips.GetByIdAsync(id);
         return entity == null ? null : MapToDto(entity);
+    }
+
+    public async Task DeleteAsync(Guid tripId, Guid requesterId)
+    {
+        var entity = await _uow.Trips.GetByIdAsync(tripId);
+        if (entity == null) throw new KeyNotFoundException("Trip not found.");
+        if (entity.TravelerUserId != requesterId)
+            throw new UnauthorizedAccessException("You are not allowed to delete this trip.");
+        if (entity.Status == TripStatus.Deleted)
+            throw new InvalidOperationException("Trip is already deleted.");
+
+        // Không cho xóa nếu đang có booking active
+        var activeBookings = await _uow.Bookings.GetByTripIdAsync(tripId);
+        var hasActive = activeBookings.Any(b =>
+            b.Status is BookingStatus.PendingCustomerConfirm
+                     or BookingStatus.PendingPayment
+                     or BookingStatus.Confirmed
+                     or BookingStatus.InProgress);
+        if (hasActive)
+            throw new InvalidOperationException("Cannot delete trip with active bookings.");
+
+        entity.Status    = TripStatus.Deleted;
+        entity.UpdatedAt = DateTime.UtcNow;
+        _uow.Trips.Update(entity);
+        await _uow.SaveChangesAsync();
     }
 
     private static IQueryable<Trip> ApplyFilters(IQueryable<Trip> query, TripSearchRequestDto request)
