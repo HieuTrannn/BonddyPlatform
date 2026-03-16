@@ -25,4 +25,9 @@ public interface IChatService
     /// senderUserId must already be a participant.
     /// </summary>
     Task<MessageDto> SendBookingCardAsync(Guid roomId, Guid senderUserId, Guid bookingId);
+
+    /// <summary>
+    /// Returns all chat rooms that the given user participates in.
+    /// </summary>
+    Task<IEnumerable<ChatRoomDto>> GetRoomsForUserAsync(Guid userId);
 }

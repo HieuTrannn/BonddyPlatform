@@ -16,7 +16,7 @@ public class Trip
     public List<string>? PreferredLanguages { get; set; }
     [MaxLength(1000)]
     public string? Notes { get; set; }
-    public TripStatus Status { get; set; } = TripStatus.Active;
+    public TripStatus Status { get; set; } = TripStatus.Open;
     public Guid TravelerUserId { get; set; }
     public User TravelerUser { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -26,8 +26,8 @@ public class Trip
 public enum TripStatus
 {
     Draft = 0,
-    Active = 1,
-    Deactivate = 2,
+    Open = 1,
+    Closed = 2,
     Expired = 3,
     /// <summary>Traveler đã xóa trip — soft delete, dữ liệu vẫn còn trong DB.</summary>
     Deleted = 4,

@@ -29,7 +29,7 @@ public class TripService : ITripService
             Children = dto.Children,
             PreferredLanguages = dto.PreferredLanguages,
             Notes = dto.Notes?.Trim(),
-            Status = TripStatus.Active,
+            Status = TripStatus.Open,
             TravelerUserId = travelerUserId,
             CreatedAt = DateTime.UtcNow
         };
@@ -37,9 +37,9 @@ public class TripService : ITripService
         await _uow.Trips.AddAsync(entity);
         await _uow.SaveChangesAsync();
 
-        // Reload with TravelerUser
-        var created = await _uow.Trips.GetByIdAsync(entity.Id);
-        return MapToDto(created ?? entity);
+        entity.TravelerUser = await _uow.Users.GetByIdAsync(travelerUserId)
+                        ?? entity.TravelerUser;
+        return MapToDto(entity);
     }
 
     public async Task<TripResponseDto> UpdateAsync(Guid tripId, Guid requesterId, TripUpdateRequestDto dto)
@@ -61,6 +61,8 @@ public class TripService : ITripService
         _uow.Trips.Update(entity);
         await _uow.SaveChangesAsync();
 
+        entity.TravelerUser = await _uow.Users.GetByIdAsync(entity.TravelerUserId)
+                        ?? entity.TravelerUser;
         return MapToDto(entity);
     }
 
@@ -106,7 +108,7 @@ public class TripService : ITripService
     public async Task<PagedResultDto<TripResponseDto>> GetOpenTripsForBuddyAsync(TripSearchRequestDto request)
     {
         var query = _uow.Trips.GetQueryable()
-            .Where(t => t.Status == TripStatus.Active);  // Deleted trips never appear here
+            .Where(t => t.Status == TripStatus.Open);  // Deleted trips never appear here
 
         query = ApplyFilters(query, request);
 
