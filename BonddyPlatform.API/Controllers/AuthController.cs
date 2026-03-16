@@ -28,7 +28,24 @@ public class AuthController : ApiControllerBase
     {
         var result = await _authService.LoginAsync(request);
         if (!result.Success)
+        {
+            if (string.Equals(result.Code, "EMAIL_NOT_VERIFIED", StringComparison.Ordinal))
+            {
+                return BadRequest(new ApiResponse<LoginErrorDto>
+                {
+                    Success = false,
+                    Code = result.Code,
+                    Message = result.Message ?? "Please verify your email first.",
+                    Data = new LoginErrorDto
+                    {
+                        Email = request.Email,
+                        IsEmailVerified = false
+                    }
+                });
+            }
+
             return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Login not successful"));
+        }
         return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(result.Data, "Login successful"));
     }
 
