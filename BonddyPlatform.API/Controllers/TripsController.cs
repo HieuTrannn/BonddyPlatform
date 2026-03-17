@@ -74,7 +74,6 @@ public class TripsController : ApiControllerBase
         var travelerUserId = GetCurrentUserIdOrThrow();
         var trip = await _tripService.GetByIdAsync(id);
         if (trip == null) return NotFound(ApiResponse.ErrorResponse("Trip not found."));
-        if (trip.TravelerUserId != travelerUserId) return Unauthorized(ApiResponse.ErrorResponse("You are not allowed to view this trip."));
         return Ok(ApiResponse<TripResponseDto>.SuccessResponse(trip, "Trip fetched successfully"));
     }
 
