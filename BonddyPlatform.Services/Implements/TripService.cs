@@ -68,7 +68,8 @@ public class TripService : ITripService
 
     public async Task<PagedResultDto<TripResponseDto>> GetMyTripsAsync(Guid travelerUserId, TripSearchRequestDto request)
     {
-        var query = _uow.Trips.GetQueryable()
+        IQueryable<Trip> query = _uow.Trips.GetQueryable()
+            .Include(t => t.TravelerUser)
             .Where(t => t.TravelerUserId == travelerUserId && t.Status != TripStatus.Deleted);
 
         query = ApplyFilters(query, request);
@@ -88,7 +89,8 @@ public class TripService : ITripService
 
     public async Task<PagedResultDto<TripResponseDto>> GetTripsForOpsAsync(TripSearchRequestDto request)
     {
-        var query = _uow.Trips.GetQueryable();
+        IQueryable<Trip> query = _uow.Trips.GetQueryable()
+            .Include(t => t.TravelerUser);
         query = ApplyFilters(query, request);
 
         var totalCount = await query.CountAsync();
@@ -107,7 +109,8 @@ public class TripService : ITripService
     /// <summary>Open trips that buddies can see and send requests to.</summary>
     public async Task<PagedResultDto<TripResponseDto>> GetOpenTripsForBuddyAsync(TripSearchRequestDto request)
     {
-        var query = _uow.Trips.GetQueryable()
+        IQueryable<Trip> query = _uow.Trips.GetQueryable()
+            .Include(t => t.TravelerUser)
             .Where(t => t.Status == TripStatus.Open);  // Deleted trips never appear here
 
         query = ApplyFilters(query, request);
@@ -127,7 +130,9 @@ public class TripService : ITripService
 
     public async Task<TripResponseDto?> GetByIdAsync(Guid id)
     {
-        var entity = await _uow.Trips.GetByIdAsync(id);
+        var entity = await _uow.Trips.GetQueryable()
+            .Include(t => t.TravelerUser)
+            .FirstOrDefaultAsync(t => t.Id == id);
         return entity == null ? null : MapToDto(entity);
     }
 

@@ -66,12 +66,11 @@ public class TripsController : ApiControllerBase
         => Ok(ApiResponse<PagedResultDto<TripResponseDto>>.SuccessResponse(await _tripService.GetOpenTripsForBuddyAsync(request), "Open trips fetched successfully"));
 
     [HttpGet("{id:guid}")]
-    [SwaggerOperation(Summary = "Get trip by id", Description = "Traveler can access own trip, CS/Admin can access any trip.")]
+    [SwaggerOperation(Summary = "Get trip by id", Description = "can access any trip.")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<TripResponseDto>))]
     [SwaggerResponse(404, "Not found", typeof(ApiResponse))]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var travelerUserId = GetCurrentUserIdOrThrow();
         var trip = await _tripService.GetByIdAsync(id);
         if (trip == null) return NotFound(ApiResponse.ErrorResponse("Trip not found."));
         return Ok(ApiResponse<TripResponseDto>.SuccessResponse(trip, "Trip fetched successfully"));
