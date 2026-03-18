@@ -22,7 +22,7 @@ public interface IChatService
 
     Task<bool> IsUserInRoomAsync(Guid roomId, Guid userId);
 
-    Task<PagedResultDto<MessageDto>> GetMessagesAsync(Guid roomId, int page, int pageSize);
+    Task<ChatRoomMessagesDto> GetMessagesAsync(Guid roomId, Guid currentUserId, int page, int pageSize);
 
     Task<MessageDto> SendMessageAsync(Guid roomId, Guid senderUserId, SendMessageRequestDto request);
 

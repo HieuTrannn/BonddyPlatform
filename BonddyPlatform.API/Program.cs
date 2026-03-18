@@ -159,6 +159,7 @@ builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IChatReadService, ChatReadService>();
 builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
+builder.Services.AddSingleton<IPresenceTracker, PresenceTracker>();
 
 // Background job: tự động expire Trip và Booking khi thời gian đã qua
 builder.Services.AddHostedService<StatusExpiryJob>();
