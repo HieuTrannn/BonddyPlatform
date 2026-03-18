@@ -69,5 +69,7 @@ public enum BookingStatus
     /// <summary>Bị hủy bởi bất kỳ bên nào.</summary>
     Cancelled = 5,
     /// <summary>Hết hạn thanh toán mà chưa trả tiền; hủy tự động.</summary>
-    CancelledByTimeout = 6
+    CancelledByTimeout = 6,
+    /// <summary>BookedDate+BookedStartTime đã qua mà booking chưa được confirm/thanh toán — tự động set bởi background job.</summary>
+    Expired = 7
 }
