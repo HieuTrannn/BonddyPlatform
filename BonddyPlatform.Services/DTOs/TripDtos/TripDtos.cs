@@ -27,6 +27,9 @@ public class TripCreateRequestDto
     [Range(0, 50)]
     public int Children { get; set; }
 
+    /// <summary>Activities traveler wants to do</summary>
+    public List<string>? Activities { get; set; }
+
     /// <summary>Languages traveler prefers buddy to speak</summary>
     public List<string>? PreferredLanguages { get; set; }
 
@@ -41,6 +44,7 @@ public class TripUpdateRequestDto
     public int? DurationHours { get; set; }
     public int? Adults { get; set; }
     public int? Children { get; set; }
+    public List<string>? Activities { get; set; }
     public List<string>? PreferredLanguages { get; set; }
     [MaxLength(1000)]
     public string? Notes { get; set; }
@@ -55,6 +59,7 @@ public class TripResponseDto
     public int DurationHours { get; set; }
     public int Adults { get; set; }
     public int Children { get; set; }
+    public List<string>? Activities { get; set; }
     public List<string>? PreferredLanguages { get; set; }
     public string? Notes { get; set; }
     public TripStatus Status { get; set; }

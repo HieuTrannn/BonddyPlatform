@@ -13,6 +13,7 @@ public class Trip
     public int DurationHours { get; set; }
     public int Adults { get; set; }
     public int Children { get; set; }
+    public List<string>? Activities { get; set; }
     public List<string>? PreferredLanguages { get; set; }
     [MaxLength(1000)]
     public string? Notes { get; set; }
