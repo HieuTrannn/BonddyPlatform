@@ -610,6 +610,9 @@ namespace BonddyPlatform.Repositories.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Activities")
+                        .HasColumnType("jsonb");
+
                     b.Property<int>("Adults")
                         .HasColumnType("integer");
 

@@ -93,6 +93,18 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.CreatedAt).IsRequired();
 
+                // List<string> Activities stored as JSONB
+                entity.Property(x => x.Activities)
+                    .HasConversion(
+                        v => System.Text.Json.JsonSerializer.Serialize(v ?? new List<string>(), (System.Text.Json.JsonSerializerOptions?)null),
+                        v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>()
+                    )
+                    .HasColumnType("jsonb")
+                    .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                        (a, b) => a != null && b != null && a.SequenceEqual(b),
+                        v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+                        v => v.ToList()));
+
                 // List<string> PreferredLanguages stored as JSONB
                 entity.Property(x => x.PreferredLanguages)
                     .HasConversion(

@@ -27,6 +27,7 @@ public class TripService : ITripService
             DurationHours = dto.DurationHours,
             Adults = dto.Adults,
             Children = dto.Children,
+            Activities = dto.Activities,
             PreferredLanguages = dto.PreferredLanguages,
             Notes = dto.Notes?.Trim(),
             Status = TripStatus.Open,
@@ -54,6 +55,7 @@ public class TripService : ITripService
         if (dto.DurationHours.HasValue) entity.DurationHours = dto.DurationHours.Value;
         if (dto.Adults.HasValue) entity.Adults = dto.Adults.Value;
         if (dto.Children.HasValue) entity.Children = dto.Children.Value;
+        if (dto.Activities != null) entity.Activities = dto.Activities;
         if (dto.PreferredLanguages != null) entity.PreferredLanguages = dto.PreferredLanguages;
         if (dto.Notes != null) entity.Notes = dto.Notes.Trim();
 
@@ -187,6 +189,7 @@ public class TripService : ITripService
         DurationHours = t.DurationHours,
         Adults = t.Adults,
         Children = t.Children,
+        Activities = t.Activities,
         PreferredLanguages = t.PreferredLanguages,
         Notes = t.Notes,
         Status = t.Status,
