@@ -29,6 +29,10 @@ public class TripRequestService : ITripRequestService
         var trip = await _uow.Trips.GetByIdAsync(dto.TripId)
             ?? throw new KeyNotFoundException("Trip not found.");
 
+        // Prevent buddy from requesting their own trip (same user has multiple roles)
+        if (trip.TravelerUserId == buddyUserId)
+            throw new InvalidOperationException("You cannot send a trip request to your own trip.");
+
         if (trip.Status != TripStatus.Open)
             throw new InvalidOperationException("This trip is no longer accepting requests.");
 

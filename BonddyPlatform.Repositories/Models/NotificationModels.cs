@@ -34,6 +34,7 @@ public enum NotificationType
     PaymentSuccess = 2,
     TripCancelled = 3,
     TripRequestCreated = 4,
+    IncidentUpdated = 5,
     System = 99
 }
 

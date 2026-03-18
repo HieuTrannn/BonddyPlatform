@@ -192,7 +192,8 @@ public class AdminController : ApiControllerBase
     [SwaggerOperation(Summary = "Admin: xem danh sách incidents của một booking")]
     public async Task<IActionResult> GetIncidents(Guid bookingId)
     {
-        var result = await _incidentService.GetByBookingIdAsync(bookingId);
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _incidentService.GetByBookingIdAsync(userId, bookingId);
         return Ok(ApiResponse<IEnumerable<IncidentResponseDto>>.SuccessResponse(result, "Incidents fetched successfully"));
     }
 
@@ -200,7 +201,8 @@ public class AdminController : ApiControllerBase
     [SwaggerOperation(Summary = "Admin: cập nhật trạng thái incident")]
     public async Task<IActionResult> ResolveIncident(Guid id, [FromBody] IncidentResolveRequestDto dto)
     {
-        var result = await _incidentService.ResolveAsync(id, dto);
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _incidentService.ResolveAsync(userId, id, dto);
         if (result is null) return NotFound("Incident not found.");
         return Ok(ApiResponse<IncidentResponseDto>.SuccessResponse(result, "Incident resolved successfully"));
     }
