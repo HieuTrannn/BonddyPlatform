@@ -1,7 +1,9 @@
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Models;
+using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.ReviewDtos;
 using BonddyPlatform.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -21,6 +23,9 @@ public class ReviewService : IReviewService
 
         var booking = await _uow.Bookings.GetByIdAsync(dto.BookingId)
             ?? throw new KeyNotFoundException($"Booking {dto.BookingId} not found.");
+
+        if (booking.TravelerUserId != reviewerUserId)
+            throw new UnauthorizedAccessException("Only the traveler of this booking can submit a review.");
 
         if (booking.Status != BookingStatus.Completed)
             throw new InvalidOperationException("Reviews can only be submitted for completed bookings.");
@@ -42,6 +47,26 @@ public class ReviewService : IReviewService
         await _uow.Reviews.AddAsync(review);
         await _uow.SaveChangesAsync();
 
+        // Update Buddy average rating (Buddy.Rate)
+        var avg = await _uow.Bookings
+            .GetQueryable()
+            .Where(b => b.BuddyId == booking.BuddyId)
+            .Join(_uow.Reviews.GetQueryable(),
+                b => b.Id,
+                r => r.BookingId,
+                (b, r) => r)
+            .Where(r => r.IsPublic)
+            .AverageAsync(r => (double)r.Rating);
+
+        var buddy = await _uow.Buddies.GetByIdAsync(booking.BuddyId);
+        if (buddy != null)
+        {
+            buddy.Rate = Math.Round((decimal)avg, 2);
+            buddy.UpdatedAt = DateTime.UtcNow;
+            _uow.Buddies.Update(buddy);
+            await _uow.SaveChangesAsync();
+        }
+
         var full = await _uow.Reviews.GetByBookingIdAsync(review.BookingId);
         return ToDto(full!);
     }
@@ -50,6 +75,18 @@ public class ReviewService : IReviewService
     {
         var review = await _uow.Reviews.GetByBookingIdAsync(bookingId);
         return review is null ? null : ToDto(review);
+    }
+
+    public async Task<PagedResultDto<ReviewResponseDto>> GetPublicByBuddyIdAsync(Guid buddyId, int page, int pageSize)
+    {
+        var (items, total) = await _uow.Reviews.GetPublicByBuddyIdAsync(buddyId, page, pageSize);
+        return new PagedResultDto<ReviewResponseDto>
+        {
+            Items = items.Select(ToDto),
+            TotalCount = total,
+            Page = page <= 0 ? 1 : page,
+            PageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 50)
+        };
     }
 
 // đâ

@@ -1,4 +1,5 @@
 using BonddyPlatform.API.Common;
+using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.IncidentDtos;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -44,8 +45,16 @@ public class IncidentsController : ApiControllerBase
     [SwaggerOperation(Summary = "Lấy danh sách sự cố theo booking")]
     public async Task<IActionResult> GetByBooking(Guid bookingId)
     {
-        var result = await _incidentService.GetByBookingIdAsync(bookingId);
-        return Ok(ApiResponse<IEnumerable<IncidentResponseDto>>.SuccessResponse(result));
+        var userId = GetCurrentUserIdOrThrow();
+        try
+        {
+            var result = await _incidentService.GetByBookingIdAsync(userId, bookingId);
+            return Ok(ApiResponse<IEnumerable<IncidentResponseDto>>.SuccessResponse(result));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     /// <summary>CS/Admin cập nhật trạng thái sự cố: PATCH /api/Incidents/{id}/resolve</summary>
@@ -54,8 +63,24 @@ public class IncidentsController : ApiControllerBase
     [Authorize(Roles = "Admin,CS")]
     public async Task<IActionResult> Resolve(Guid id, [FromBody] IncidentResolveRequestDto dto)
     {
-        var result = await _incidentService.ResolveAsync(id, dto);
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _incidentService.ResolveAsync(userId, id, dto);
         if (result is null) return NotFound("Incident not found.");
         return Ok(ApiResponse<IncidentResponseDto>.SuccessResponse(result));
+    }
+
+    /// <summary>
+    /// CS/Admin list incidents with filters and paging.
+    /// GET /api/Incidents?status=Open&type=NoShow&page=1&pageSize=20
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = "Admin,CS")]
+    [SwaggerOperation(Summary = "CS/Admin list incidents (paging + filters)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<IncidentResponseDto>>))]
+    public async Task<IActionResult> Search([FromQuery] IncidentSearchRequestDto request)
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _incidentService.SearchForOpsAsync(userId, request);
+        return Ok(ApiResponse<PagedResultDto<IncidentResponseDto>>.SuccessResponse(result));
     }
 }

@@ -1,4 +1,5 @@
 using BonddyPlatform.API.Common;
+using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.ReviewDtos;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -56,5 +57,18 @@ public class ReviewsController : ApiControllerBase
         var result = await _reviewService.GetByBookingIdAsync(bookingId);
         if (result is null) return NotFound("Review not found.");
         return Ok(ApiResponse<ReviewResponseDto>.SuccessResponse(result));
+    }
+
+    /// <summary>
+    /// Get public reviews for a buddy profile with paging.
+    /// GET /api/Buddies/{buddyId}/reviews?page=1&pageSize=10
+    /// </summary>
+    [HttpGet("/api/Buddies/{buddyId:guid}/reviews")]
+    [SwaggerOperation(Summary = "Get public reviews for a buddy (paging)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<ReviewResponseDto>>))]
+    public async Task<IActionResult> GetPublicByBuddy(Guid buddyId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _reviewService.GetPublicByBuddyIdAsync(buddyId, page, pageSize);
+        return Ok(ApiResponse<PagedResultDto<ReviewResponseDto>>.SuccessResponse(result));
     }
 }
