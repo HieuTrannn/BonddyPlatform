@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using BonddyPlatform.API.Hubs;
 using BonddyPlatform.API.Realtime;
+using BonddyPlatform.API.BackgroundJobs;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -158,6 +159,9 @@ builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IChatReadService, ChatReadService>();
 builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
+
+// Background job: tự động expire Trip và Booking khi thời gian đã qua
+builder.Services.AddHostedService<StatusExpiryJob>();
 
 var app = builder.Build();
 

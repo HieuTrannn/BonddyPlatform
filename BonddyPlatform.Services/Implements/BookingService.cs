@@ -16,13 +16,14 @@ public class BookingService : IBookingService
     // State machine: key = current status, value = allowed next statuses
     private static readonly Dictionary<BookingStatus, HashSet<BookingStatus>> AllowedTransitions = new()
     {
-        [BookingStatus.PendingCustomerConfirm] = new() { BookingStatus.Cancelled },
-        [BookingStatus.PendingPayment]         = new() { BookingStatus.Confirmed, BookingStatus.CancelledByTimeout, BookingStatus.Cancelled },
+        [BookingStatus.PendingCustomerConfirm] = new() { BookingStatus.Cancelled, BookingStatus.Expired },
+        [BookingStatus.PendingPayment]         = new() { BookingStatus.Confirmed, BookingStatus.CancelledByTimeout, BookingStatus.Cancelled, BookingStatus.Expired },
         [BookingStatus.Confirmed]              = new() { BookingStatus.InProgress, BookingStatus.Cancelled },
         [BookingStatus.InProgress]             = new() { BookingStatus.Completed, BookingStatus.Cancelled },
         [BookingStatus.Completed]              = new(),
         [BookingStatus.Cancelled]              = new(),
-        [BookingStatus.CancelledByTimeout]     = new()
+        [BookingStatus.CancelledByTimeout]     = new(),
+        [BookingStatus.Expired]                = new()
     };
 
     public BookingService(IUnitOfWork uow, IChatService chatService)
