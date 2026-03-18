@@ -8,10 +8,28 @@ namespace BonddyPlatform.API.Hubs;
 public class ChatHub : Hub
 {
     private readonly IChatService _chatService;
+    private readonly IPresenceTracker _presenceTracker;
 
-    public ChatHub(IChatService chatService)
+    public ChatHub(IChatService chatService, IPresenceTracker presenceTracker)
     {
         _chatService = chatService;
+        _presenceTracker = presenceTracker;
+    }
+
+    public override Task OnConnectedAsync()
+    {
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+            _presenceTracker.UserConnected(userId.Value);
+        return base.OnConnectedAsync();
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = GetCurrentUserId();
+        if (userId.HasValue)
+            _presenceTracker.UserDisconnected(userId.Value);
+        return base.OnDisconnectedAsync(exception);
     }
 
     public async Task JoinRoom(Guid roomId)

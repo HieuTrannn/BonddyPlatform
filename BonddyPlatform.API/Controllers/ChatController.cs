@@ -1,6 +1,5 @@
 using BonddyPlatform.API.Common;
 using BonddyPlatform.Services.DTOs.ChatDtos;
-using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.NotificationDtos;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -91,7 +90,7 @@ public class ChatController : ApiControllerBase
     /// </summary>
     [HttpGet("rooms/{roomId:guid}/messages")]
     [SwaggerOperation(Summary = "Get messages for room with paging")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<PagedResultDto<MessageDto>>))]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ChatRoomMessagesDto>))]
     public async Task<IActionResult> GetMessages(
         Guid roomId,
         [FromQuery] int page = 1,
@@ -103,7 +102,7 @@ public class ChatController : ApiControllerBase
         {
             return Unauthorized(ApiResponse.ErrorResponse("You are not a participant of this room."));
         }
-        return Ok(ApiResponse<PagedResultDto<MessageDto>>.SuccessResponse(await _chatService.GetMessagesAsync(roomId, page, pageSize), "Messages fetched successfully"));
+        return Ok(ApiResponse<ChatRoomMessagesDto>.SuccessResponse(await _chatService.GetMessagesAsync(roomId, userId, page, pageSize), "Messages fetched successfully"));
     }
 
     /// <summary>

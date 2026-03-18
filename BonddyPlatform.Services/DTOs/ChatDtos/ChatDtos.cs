@@ -1,3 +1,5 @@
+using BonddyPlatform.Services.DTOs.Common;
+
 namespace BonddyPlatform.Services.DTOs.ChatDtos;
 
 public class ChatRoomDto
@@ -7,6 +9,10 @@ public class ChatRoomDto
     public Guid? TripId { get; set; }
     public Guid? TripRequestId { get; set; }
     public Guid? BuddyUserId { get; set; }
+    /// <summary>UserId of the other participant (the person you are chatting with).</summary>
+    public Guid? OtherUserId { get; set; }
+    /// <summary>Full name of the other participant.</summary>
+    public string? OtherUserName { get; set; }
 }
 
 public class MessageDto
@@ -21,7 +27,28 @@ public class MessageDto
     public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>
+/// Response for GetMessages: includes other participant info and paginated messages.
+/// </summary>
+public class ChatRoomMessagesDto
+{
+    /// <summary>UserId of the other participant in this room.</summary>
+    public Guid? OtherUserId { get; set; }
+    /// <summary>Full name of the other participant.</summary>
+    public string? OtherUserName { get; set; }
+    /// <summary>Whether the other participant is currently online.</summary>
+    public bool IsOnline { get; set; }
+    public IEnumerable<MessageDto> Items { get; set; } = Enumerable.Empty<MessageDto>();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling(TotalCount / (double)PageSize) : 0;
+    public bool HasPreviousPage => Page > 1;
+    public bool HasNextPage => Page < TotalPages;
+}
+
 public class SendMessageRequestDto
 {
     public string ContentText { get; set; } = string.Empty;
 }
+

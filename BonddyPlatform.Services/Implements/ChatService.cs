@@ -11,11 +11,13 @@ public class ChatService : IChatService
 {
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notificationService;
+    private readonly IPresenceTracker _presenceTracker;
 
-    public ChatService(IUnitOfWork uow, INotificationService notificationService)
+    public ChatService(IUnitOfWork uow, INotificationService notificationService, IPresenceTracker presenceTracker)
     {
         _uow = uow;
         _notificationService = notificationService;
+        _presenceTracker = presenceTracker;
     }
 
     public async Task<ChatRoomDto> GetOrCreateTripRoomAsync(Guid tripId, Guid travelerUserId)
@@ -141,7 +143,7 @@ public class ChatService : IChatService
         return await _uow.ChatParticipants.IsUserInRoomAsync(roomId, userId);
     }
 
-    public async Task<PagedResultDto<MessageDto>> GetMessagesAsync(Guid roomId, int page, int pageSize)
+    public async Task<ChatRoomMessagesDto> GetMessagesAsync(Guid roomId, Guid currentUserId, int page, int pageSize)
     {
         var items = await _uow.Messages.GetMessagesForRoomAsync(roomId, page, pageSize);
 
@@ -150,8 +152,24 @@ public class ChatService : IChatService
             .Where(m => m.RoomId == roomId)
             .CountAsync();
 
-        return new PagedResultDto<MessageDto>
+        // Resolve the other participant's identity and online status
+        var otherParticipant = await _uow.ChatRooms
+            .GetQueryable()
+            .Where(r => r.Id == roomId)
+            .SelectMany(r => r.Participants)
+            .Where(p => p.UserId != currentUserId)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync();
+
+        var otherUserId = otherParticipant?.UserId;
+        var otherUserName = otherParticipant?.User?.FullName;
+        var isOnline = otherUserId.HasValue && _presenceTracker.IsOnline(otherUserId.Value);
+
+        return new ChatRoomMessagesDto
         {
+            OtherUserId = otherUserId,
+            OtherUserName = otherUserName,
+            IsOnline = isOnline,
             Items = items.Select(MapMessageToDto),
             TotalCount = totalCount,
             Page = page,
@@ -247,19 +265,33 @@ public class ChatService : IChatService
         return MapMessageToDto(message);
     }
 
-        public async Task<IEnumerable<ChatRoomDto>> GetRoomsForUserAsync(Guid userId)
+    public async Task<IEnumerable<ChatRoomDto>> GetRoomsForUserAsync(Guid userId)
+    {
+        var rooms = await _uow.ChatRooms
+            .GetQueryable()
+            .Include(r => r.Participants)
+                .ThenInclude(p => p.User)
+            .Where(r => r.Participants.Any(p => p.UserId == userId))
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        return rooms.Select(r => MapRoomToDto(r, userId));
+    }
+
+    private static ChatRoomDto MapRoomToDto(ChatRoom room, Guid currentUserId)
+    {
+        var other = room.Participants.FirstOrDefault(p => p.UserId != currentUserId);
+        return new ChatRoomDto
         {
-            var query = _uow.ChatRooms
-                .GetQueryable()
-                .Include(r => r.Participants)
-                .Where(r => r.Participants.Any(p => p.UserId == userId));
-
-            var rooms = await query
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
-
-            return rooms.Select(MapRoomToDto);
-        }
+            Id = room.Id,
+            RoomType = room.RoomType.ToString(),
+            TripId = room.TripId,
+            TripRequestId = room.TripRequestId,
+            BuddyUserId = room.BuddyUserId,
+            OtherUserId = other?.UserId,
+            OtherUserName = other?.User?.FullName
+        };
+    }
 
     private static ChatRoomDto MapRoomToDto(ChatRoom room) => new()
     {
