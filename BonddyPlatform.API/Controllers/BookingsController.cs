@@ -25,6 +25,28 @@ public class BookingsController : ApiControllerBase
     // ─── Buddy creates booking ────────────────────────────────────────────────
 
     /// <summary>
+    /// Buddy tạo booking từ chat với customer.
+    /// TripRequestId là tùy chọn; nếu không có thì dùng ChatRoomId để tạo direct booking.
+    /// POST /api/Bookings
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = "Buddy")]
+    [SwaggerOperation(Summary = "Buddy tạo booking từ chat (TripRequestId optional)")]
+    public async Task<IActionResult> Create([FromBody] BookingCreateRequestDto dto)
+    {
+        try
+        {
+            var buddyUserId = GetCurrentUserIdOrThrow();
+            var result = await _bookingService.CreateAsync(buddyUserId, dto);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id },
+                ApiResponse<BookingResponseDto>.SuccessResponse(result, "Booking created and sent to traveler."));
+        }
+        catch (KeyNotFoundException ex)      { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
+        catch (UnauthorizedAccessException)  { return Forbid(); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
+    }
+
+    /// <summary>
     /// Buddy tạo booking từ một TripRequest.
     /// POST /api/TripRequests/{tripRequestId}/booking
     /// </summary>
