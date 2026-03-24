@@ -100,9 +100,24 @@ public class PaymentsController : ApiControllerBase
     [SwaggerOperation(Summary = "Capture PayPal order")]
     public async Task<IActionResult> CapturePayPalOrder(Guid paymentId, [FromBody] PayPalCaptureRequestDto dto)
     {
-        var userId = GetCurrentUserIdOrThrow();
-        var result = await _paymentService.CapturePayPalOrderAsync(paymentId, dto.OrderId, userId);
-        return Ok(ApiResponse<PaymentResponseDto>.SuccessResponse(result, "PayPal payment captured."));
+        try
+        {
+            var userId = GetCurrentUserIdOrThrow();
+            var result = await _paymentService.CapturePayPalOrderAsync(paymentId, dto.OrderId, userId);
+            return Ok(ApiResponse<PaymentResponseDto>.SuccessResponse(result, "PayPal payment captured."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.ErrorResponse(ex.Message));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.ErrorResponse(ex.Message));
+        }
     }
 
     /// <summary>PayPal webhook endpoint (must be publicly accessible).</summary>
