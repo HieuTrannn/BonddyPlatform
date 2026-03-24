@@ -13,6 +13,10 @@ public class ChatRoomDto
     public Guid? OtherUserId { get; set; }
     /// <summary>Full name of the other participant.</summary>
     public string? OtherUserName { get; set; }
+    /// <summary>Preview text of the most recent message in this room.</summary>
+    public string? LastMessage { get; set; }
+    /// <summary>Timestamp of the most recent message in this room.</summary>
+    public DateTime? LastMessageAt { get; set; }
 }
 
 public class MessageDto

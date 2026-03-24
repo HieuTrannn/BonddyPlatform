@@ -272,13 +272,32 @@ public class ChatService : IChatService
             .Include(r => r.Participants)
                 .ThenInclude(p => p.User)
             .Where(r => r.Participants.Any(p => p.UserId == userId))
-            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
 
-        return rooms.Select(r => MapRoomToDto(r, userId));
+        var roomIds = rooms.Select(r => r.Id).ToList();
+
+        var latestMessages = await _uow.Messages
+            .GetQueryable()
+            .Where(m => roomIds.Contains(m.RoomId))
+            .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.Id)
+            .ToListAsync();
+
+        var latestByRoomId = latestMessages
+            .GroupBy(m => m.RoomId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        return rooms
+            .Select(r =>
+            {
+                latestByRoomId.TryGetValue(r.Id, out var latestMessage);
+                return MapRoomToDto(r, userId, latestMessage);
+            })
+            .OrderByDescending(r => r.LastMessageAt ?? DateTime.MinValue)
+            .ThenByDescending(r => r.Id);
     }
 
-    private static ChatRoomDto MapRoomToDto(ChatRoom room, Guid currentUserId)
+    private static ChatRoomDto MapRoomToDto(ChatRoom room, Guid currentUserId, Message? lastMessage = null)
     {
         var other = room.Participants.FirstOrDefault(p => p.UserId != currentUserId);
         return new ChatRoomDto
@@ -289,7 +308,9 @@ public class ChatService : IChatService
             TripRequestId = room.TripRequestId,
             BuddyUserId = room.BuddyUserId,
             OtherUserId = other?.UserId,
-            OtherUserName = other?.User?.FullName
+            OtherUserName = other?.User?.FullName,
+            LastMessage = FormatLastMessagePreview(lastMessage, currentUserId),
+            LastMessageAt = lastMessage?.CreatedAt
         };
     }
 
@@ -299,8 +320,31 @@ public class ChatService : IChatService
         RoomType = room.RoomType.ToString(),
         TripId = room.TripId,
         TripRequestId = room.TripRequestId,
-        BuddyUserId = room.BuddyUserId
+        BuddyUserId = room.BuddyUserId,
+        LastMessage = null,
+        LastMessageAt = null
     };
+
+    private static string? FormatLastMessagePreview(Message? message, Guid currentUserId)
+    {
+        if (message == null) return null;
+
+        string content = message.ContentType switch
+        {
+            MessageContentType.Text => string.IsNullOrWhiteSpace(message.ContentText)
+                ? "(Empty message)"
+                : message.ContentText!,
+            MessageContentType.BookingCard => "[Booking offer]",
+            MessageContentType.Image => "[Image]",
+            MessageContentType.File => "[File]",
+            MessageContentType.System => "[System]",
+            _ => "[Message]"
+        };
+
+        return message.SenderUserId == currentUserId
+            ? $"You: {content}"
+            : content;
+    }
 
     private static MessageDto MapMessageToDto(Message message) => new()
     {
