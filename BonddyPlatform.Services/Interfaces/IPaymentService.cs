@@ -15,4 +15,13 @@ public interface IPaymentService
 
     /// <summary>CS/Admin chuyển trạng thái: Pending → Held → Released / Refunded</summary>
     Task<PaymentResponseDto?> TransitionAsync(Guid id, PaymentTransitionRequestDto dto);
+
+    /// <summary>Create PayPal order for a booking payment.</summary>
+    Task<PayPalCreateOrderResponseDto> CreatePayPalOrderAsync(Guid bookingId, Guid requesterUserId);
+
+    /// <summary>Capture a PayPal order and mark payment as held.</summary>
+    Task<PaymentResponseDto> CapturePayPalOrderAsync(Guid paymentId, string orderId, Guid requesterUserId);
+
+    /// <summary>Handle PayPal webhook (signature verification + state updates).</summary>
+    Task<PayPalWebhookResultDto> HandlePayPalWebhookAsync(string rawBody, IDictionary<string, string> headers);
 }

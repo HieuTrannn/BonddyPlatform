@@ -1,13 +1,14 @@
 using BonddyPlatform.API.Common;
 using BonddyPlatform.Services.DTOs.PaymentDtos;
 using BonddyPlatform.Services.Interfaces;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace BonddyPlatform.API.Controllers;
 
-[Authorize(Roles = "Admin,CS")]
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class PaymentsController : ApiControllerBase
@@ -21,6 +22,7 @@ public class PaymentsController : ApiControllerBase
 
     /// <summary>Tạo payment record cho một booking: POST /api/Bookings/{bookingId}/payment</summary>
     [HttpPost("/api/Bookings/{bookingId:guid}/payment")]
+    [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Tạo payment cho một booking")]
     public async Task<IActionResult> Create(Guid bookingId, [FromBody] PaymentCreateRequestDto dto)
     {
@@ -43,6 +45,7 @@ public class PaymentsController : ApiControllerBase
 
     /// <summary>Lấy payment của một booking: GET /api/Bookings/{bookingId}/payment</summary>
     [HttpGet("/api/Bookings/{bookingId:guid}/payment")]
+    [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Lấy payment của một booking")]
     public async Task<IActionResult> GetByBooking(Guid bookingId)
     {
@@ -53,6 +56,7 @@ public class PaymentsController : ApiControllerBase
 
     /// <summary>Lấy payment theo id: GET /api/Payments/{id}</summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Lấy payment theo id")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -63,6 +67,7 @@ public class PaymentsController : ApiControllerBase
 
     /// <summary>Chuyển trạng thái payment (escrow): PATCH /api/Payments/{id}/status</summary>
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Chuyển trạng thái payment (escrow)")]
     public async Task<IActionResult> Transition(Guid id, [FromBody] PaymentTransitionRequestDto dto)
     {
@@ -76,5 +81,46 @@ public class PaymentsController : ApiControllerBase
         {
             return BadRequest(ex.Message);
         }
+    }
+
+    /// <summary>Create a PayPal order for current user's booking.</summary>
+    [HttpPost("paypal/bookings/{bookingId:guid}/create-order")]
+    [HttpPost("/api/Bookings/{bookingId:guid}/payment/paypal/create-order")]
+    [SwaggerOperation(Summary = "Create PayPal order")]
+    public async Task<IActionResult> CreatePayPalOrder(Guid bookingId)
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _paymentService.CreatePayPalOrderAsync(bookingId, userId);
+        return Ok(ApiResponse<PayPalCreateOrderResponseDto>.SuccessResponse(result, "PayPal order created."));
+    }
+
+    /// <summary>Capture PayPal order after customer approves payment.</summary>
+    [HttpPost("paypal/{paymentId:guid}/capture")]
+    [HttpPost("/api/Bookings/payments/{paymentId:guid}/paypal/capture")]
+    [SwaggerOperation(Summary = "Capture PayPal order")]
+    public async Task<IActionResult> CapturePayPalOrder(Guid paymentId, [FromBody] PayPalCaptureRequestDto dto)
+    {
+        var userId = GetCurrentUserIdOrThrow();
+        var result = await _paymentService.CapturePayPalOrderAsync(paymentId, dto.OrderId, userId);
+        return Ok(ApiResponse<PaymentResponseDto>.SuccessResponse(result, "PayPal payment captured."));
+    }
+
+    /// <summary>PayPal webhook endpoint (must be publicly accessible).</summary>
+    [AllowAnonymous]
+    [HttpPost("paypal/webhook")]
+    [SwaggerOperation(Summary = "PayPal webhook")]
+    public async Task<IActionResult> PayPalWebhook()
+    {
+        Request.EnableBuffering();
+        string rawBody;
+        using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+        {
+            rawBody = await reader.ReadToEndAsync();
+            Request.Body.Position = 0;
+        }
+
+        var headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString(), StringComparer.OrdinalIgnoreCase);
+        var result = await _paymentService.HandlePayPalWebhookAsync(rawBody, headers);
+        return Ok(ApiResponse<PayPalWebhookResultDto>.SuccessResponse(result, result.Message));
     }
 }

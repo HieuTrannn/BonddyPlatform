@@ -1,4 +1,5 @@
 using BonddyPlatform.Repositories.Models;
+using BonddyPlatform.Services.DTOs.PaymentDtos;
 
 namespace BonddyPlatform.Services.DTOs.BookingDtos;
 
@@ -68,4 +69,10 @@ public class BookingResponseDto
 
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+}
+
+public class ConfirmBookingAndPayResponseDto
+{
+    public BookingResponseDto Booking { get; set; } = new();
+    public PayPalCreateOrderResponseDto PaymentOrder { get; set; } = new();
 }

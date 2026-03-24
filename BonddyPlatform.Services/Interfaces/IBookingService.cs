@@ -16,6 +16,13 @@ public interface IBookingService
     /// </summary>
     Task<BookingResponseDto> ConfirmByTravelerAsync(Guid travelerUserId, Guid bookingId);
 
+    /// <summary>
+    /// Ensures booking is in PendingPayment for the traveler.
+    /// If currently PendingCustomerConfirm, it will confirm.
+    /// If already PendingPayment, returns current booking (idempotent).
+    /// </summary>
+    Task<BookingResponseDto> EnsurePendingPaymentAsync(Guid travelerUserId, Guid bookingId);
+
     /// <summary>Lấy chi tiết một booking.</summary>
     Task<BookingResponseDto?> GetByIdAsync(Guid id);
 
