@@ -26,6 +26,29 @@ public class BookingCreateFromTripRequestDto
     public string? NoteForCustomer { get; set; }
 }
 
+/// <summary>
+/// Buddy creates booking from chat flow.
+/// - If TripRequestId is provided: use existing TripRequest flow.
+/// - If TripRequestId is null: ChatRoomId is required and backend will create internal Trip/TripRequest.
+/// </summary>
+public class BookingCreateRequestDto
+{
+    public Guid? TripRequestId { get; set; }
+    public Guid? ChatRoomId { get; set; }
+
+    public DateOnly BookedDate { get; set; }
+    public TimeOnly BookedStartTime { get; set; }
+    public int BookedDurationHours { get; set; }
+    public int BookedAdults { get; set; }
+    public int BookedChildren { get; set; }
+
+    public decimal Price { get; set; }
+    public string Currency { get; set; } = "USD";
+    public string? Includes { get; set; }
+    public string? Excludes { get; set; }
+    public string? NoteForCustomer { get; set; }
+}
+
 public class BookingUpdateStatusRequestDto
 {
     public BookingStatus Status { get; set; }

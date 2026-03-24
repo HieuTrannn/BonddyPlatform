@@ -32,6 +32,32 @@ public class BookingService : IBookingService
         _chatService = chatService;
     }
 
+    public async Task<BookingResponseDto> CreateAsync(Guid buddyUserId, BookingCreateRequestDto dto)
+    {
+        if (dto.TripRequestId.HasValue)
+        {
+            var fromTripRequestDto = new BookingCreateFromTripRequestDto
+            {
+                BookedDate = dto.BookedDate,
+                BookedStartTime = dto.BookedStartTime,
+                BookedDurationHours = dto.BookedDurationHours,
+                BookedAdults = dto.BookedAdults,
+                BookedChildren = dto.BookedChildren,
+                Price = dto.Price,
+                Currency = dto.Currency,
+                Includes = dto.Includes,
+                Excludes = dto.Excludes,
+                NoteForCustomer = dto.NoteForCustomer
+            };
+            return await CreateFromTripRequestAsync(buddyUserId, dto.TripRequestId.Value, fromTripRequestDto);
+        }
+
+        if (!dto.ChatRoomId.HasValue)
+            throw new InvalidOperationException("ChatRoomId is required when TripRequestId is not provided.");
+
+        return await CreateFromDirectChatAsync(buddyUserId, dto.ChatRoomId.Value, dto);
+    }
+
     // ─── CreateFromTripRequestAsync ──────────────────────────────────────────
 
     public async Task<BookingResponseDto> CreateFromTripRequestAsync(
@@ -98,6 +124,100 @@ public class BookingService : IBookingService
         {
             await _chatService.SendBookingCardAsync(chatRoomId.Value, buddyUserId, booking.Id);
         }
+
+        var full = await _uow.Bookings.GetByIdWithDetailsAsync(booking.Id);
+        return ToDto(full!);
+    }
+
+    private async Task<BookingResponseDto> CreateFromDirectChatAsync(
+        Guid buddyUserId, Guid chatRoomId, BookingCreateRequestDto dto)
+    {
+        var buddy = await _uow.Buddies.GetByUserIdAsync(buddyUserId)
+            ?? throw new KeyNotFoundException("Buddy profile not found.");
+
+        var room = await _uow.ChatRooms.GetByIdWithParticipantsAsync(chatRoomId)
+            ?? throw new KeyNotFoundException("Chat room not found.");
+
+        if (!room.Participants.Any(p => p.UserId == buddyUserId))
+            throw new UnauthorizedAccessException("Buddy is not a participant of this chat room.");
+
+        var travelerUserId = room.Participants
+            .Where(p => p.UserId != buddyUserId)
+            .Select(p => p.UserId)
+            .FirstOrDefault();
+
+        if (travelerUserId == Guid.Empty)
+            throw new InvalidOperationException("Cannot determine traveler from chat room participants.");
+
+        var bookedStartDateTime = DateTime.SpecifyKind(
+            dto.BookedDate.ToDateTime(dto.BookedStartTime),
+            DateTimeKind.Utc);
+
+        // Internal supporting Trip to satisfy current schema.
+        var trip = new Trip
+        {
+            TravelerUserId = travelerUserId,
+            City = "Direct booking",
+            StartDate = dto.BookedDate,
+            StartTime = dto.BookedStartTime,
+            DurationHours = dto.BookedDurationHours,
+            Adults = dto.BookedAdults,
+            Children = dto.BookedChildren,
+            Notes = dto.NoteForCustomer,
+            Status = TripStatus.Closed,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _uow.Trips.AddAsync(trip);
+        await _uow.SaveChangesAsync();
+
+        // Internal supporting TripRequest to satisfy current schema.
+        var tripRequest = new TripRequest
+        {
+            TripId = trip.Id,
+            BuddyId = buddy.Id,
+            OfferedPrice = dto.Price,
+            IsInboxOnly = false,
+            Note = "Auto-generated from direct chat booking flow.",
+            ExpiresAt = bookedStartDateTime,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _uow.TripRequests.AddAsync(tripRequest);
+        await _uow.SaveChangesAsync();
+
+        var platformFee = Math.Round(dto.Price * (decimal)PlatformFeeRate, 2);
+        var total = dto.Price + platformFee;
+
+        var booking = new Booking
+        {
+            TripId = trip.Id,
+            TripRequestId = tripRequest.Id,
+            BuddyId = buddy.Id,
+            TravelerUserId = travelerUserId,
+            ChatRoomId = chatRoomId,
+
+            BookedDate = dto.BookedDate,
+            BookedStartTime = dto.BookedStartTime,
+            BookedDurationHours = dto.BookedDurationHours,
+            BookedAdults = dto.BookedAdults,
+            BookedChildren = dto.BookedChildren,
+
+            Price = dto.Price,
+            Currency = dto.Currency,
+            PlatformFeeAmount = platformFee,
+            TotalAmount = total,
+
+            Includes = dto.Includes,
+            Excludes = dto.Excludes,
+            NoteForCustomer = dto.NoteForCustomer,
+
+            Status = BookingStatus.PendingCustomerConfirm,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _uow.Bookings.AddAsync(booking);
+        await _uow.SaveChangesAsync();
+
+        await _chatService.SendBookingCardAsync(chatRoomId, buddyUserId, booking.Id);
 
         var full = await _uow.Bookings.GetByIdWithDetailsAsync(booking.Id);
         return ToDto(full!);

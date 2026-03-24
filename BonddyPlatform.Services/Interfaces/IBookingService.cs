@@ -6,6 +6,11 @@ namespace BonddyPlatform.Services.Interfaces;
 public interface IBookingService
 {
     /// <summary>
+    /// Buddy creates booking from chat. TripRequestId is optional.
+    /// </summary>
+    Task<BookingResponseDto> CreateAsync(Guid buddyUserId, BookingCreateRequestDto dto);
+
+    /// <summary>
     /// Buddy tạo booking từ TripRequest (sau khi đã trao đổi trong chat).
     /// Tự động gửi booking card vào chat room giữa buddy và traveler.
     /// </summary>
