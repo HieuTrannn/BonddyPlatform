@@ -243,7 +243,8 @@ public class PaymentService : IPaymentService
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await client.PostAsync($"/v2/checkout/orders/{normalizedOrderId}/capture", null);
+        var captureContent = new StringContent("{}", Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"/v2/checkout/orders/{normalizedOrderId}/capture", captureContent);
         var body = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
