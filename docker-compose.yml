@@ -38,6 +38,12 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-BonddyPlatform}
       Jwt__Audience: ${JWT_AUDIENCE:-BonddyPlatform}
       Jwt__AccessTokenExpiryMinutes: ${JWT_ACCESS_TOKEN_EXPIRY_MINUTES:-60}
+      PAYPAL_BASE_URL: ${PAYPAL_BASE_URL:?Set PAYPAL_BASE_URL in .env}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:?Set PAYPAL_CLIENT_ID in .env}
+      PAYPAL_SECRET: ${PAYPAL_SECRET:?Set PAYPAL_SECRET in .env}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:?Set PAYPAL_WEBHOOK_ID in .env}
+      PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:?Set PAYPAL_RETURN_URL in .env}
+      PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:?Set PAYPAL_CANCEL_URL in .env}
     ports:
       - "8080:8080" # Nginx sẽ proxy 80/443 -> 8080
     # Mount Firebase credentials (bỏ comment 1 dòng dưới khi đã có file JSON trên VPS)
