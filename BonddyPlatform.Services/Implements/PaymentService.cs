@@ -217,6 +217,13 @@ public class PaymentService : IPaymentService
         if (string.IsNullOrWhiteSpace(orderId))
             throw new InvalidOperationException("OrderId is required.");
 
+        // FE callback URL may contain token + payer id in one string.
+        // Keep only the PayPal order token part before '&'.
+        var normalizedOrderId = orderId.Trim();
+        var ampIndex = normalizedOrderId.IndexOf('&');
+        if (ampIndex > 0)
+            normalizedOrderId = normalizedOrderId[..ampIndex];
+
         var payment = await _uow.Payments.GetByIdAsync(paymentId)
             ?? throw new KeyNotFoundException("Payment not found.");
         var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId)
@@ -236,7 +243,7 @@ public class PaymentService : IPaymentService
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-        var response = await client.PostAsync($"/v2/checkout/orders/{orderId}/capture", null);
+        var response = await client.PostAsync($"/v2/checkout/orders/{normalizedOrderId}/capture", null);
         var body = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
@@ -254,7 +261,7 @@ public class PaymentService : IPaymentService
 
         payment.Status = PaymentStatus.Held;
         payment.HeldAt = DateTime.UtcNow;
-        payment.ExternalRef = orderId;
+        payment.ExternalRef = normalizedOrderId;
         payment.Method = PaymentMethod.Wallet;
         payment.UpdatedAt = DateTime.UtcNow;
         _uow.Payments.Update(payment);
