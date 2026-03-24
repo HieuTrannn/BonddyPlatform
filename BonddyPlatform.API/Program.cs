@@ -20,6 +20,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.Configure<FirebaseOptions>(builder.Configuration.GetSection(FirebaseOptions.SectionName));
+builder.Services.Configure<PayPalOptions>(options =>
+{
+    builder.Configuration.GetSection(PayPalOptions.SectionName).Bind(options);
+    options.BaseUrl = builder.Configuration["PAYPAL_BASE_URL"] ?? options.BaseUrl;
+    options.ClientId = builder.Configuration["PAYPAL_CLIENT_ID"] ?? options.ClientId;
+    options.Secret = builder.Configuration["PAYPAL_SECRET"] ?? options.Secret;
+    options.WebhookId = builder.Configuration["PAYPAL_WEBHOOK_ID"] ?? options.WebhookId;
+    options.ReturnUrl = builder.Configuration["PAYPAL_RETURN_URL"] ?? options.ReturnUrl;
+    options.CancelUrl = builder.Configuration["PAYPAL_CANCEL_URL"] ?? options.CancelUrl;
+});
+builder.Services.AddHttpClient();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? new JwtOptions();

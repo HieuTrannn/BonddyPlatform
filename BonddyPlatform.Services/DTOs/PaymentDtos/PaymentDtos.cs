@@ -34,3 +34,24 @@ public class PaymentResponseDto
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
+
+public class PayPalCreateOrderResponseDto
+{
+    public Guid PaymentId { get; set; }
+    public Guid BookingId { get; set; }
+    public string OrderId { get; set; } = string.Empty;
+    public string? ApproveUrl { get; set; }
+    public string Currency { get; set; } = "USD";
+    public decimal Amount { get; set; }
+}
+
+public class PayPalCaptureRequestDto
+{
+    public string OrderId { get; set; } = string.Empty;
+}
+
+public class PayPalWebhookResultDto
+{
+    public bool Processed { get; set; }
+    public string Message { get; set; } = string.Empty;
+}

@@ -14,10 +14,12 @@ namespace BonddyPlatform.API.Controllers;
 public class BookingsController : ApiControllerBase
 {
     private readonly IBookingService _bookingService;
+    private readonly IPaymentService _paymentService;
 
-    public BookingsController(IBookingService bookingService)
+    public BookingsController(IBookingService bookingService, IPaymentService paymentService)
     {
         _bookingService = bookingService;
+        _paymentService = paymentService;
     }
 
     // ─── Buddy creates booking ────────────────────────────────────────────────
@@ -51,7 +53,7 @@ public class BookingsController : ApiControllerBase
     /// POST /api/Bookings/{id}/confirm
     /// </summary>
     [HttpPost("{id:guid}/confirm")]
-    [Authorize(Roles = "Traveler")]
+    [Authorize(Roles = "User")]
     [SwaggerOperation(Summary = "Traveler xác nhận booking → chuyển sang PendingPayment")]
     public async Task<IActionResult> ConfirmByTraveler(Guid id)
     {
@@ -60,6 +62,36 @@ public class BookingsController : ApiControllerBase
             var travelerUserId = GetCurrentUserIdOrThrow();
             var result = await _bookingService.ConfirmByTravelerAsync(travelerUserId, id);
             return Ok(ApiResponse<BookingResponseDto>.SuccessResponse(result, "Booking confirmed. Please complete payment."));
+        }
+        catch (KeyNotFoundException ex)      { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
+        catch (UnauthorizedAccessException)  { return Forbid(); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
+    }
+
+    /// <summary>
+    /// Traveler confirms booking and gets PayPal approve URL in one call.
+    /// FE should redirect to PaymentOrder.ApproveUrl immediately.
+    /// </summary>
+    [HttpPost("{id:guid}/confirm-and-create-paypal-order")]
+    [Authorize(Roles = "User")]
+    [SwaggerOperation(Summary = "Traveler xác nhận booking và tạo PayPal order ngay")]
+    public async Task<IActionResult> ConfirmAndCreatePayPalOrder(Guid id)
+    {
+        try
+        {
+            var travelerUserId = GetCurrentUserIdOrThrow();
+            var booking = await _bookingService.EnsurePendingPaymentAsync(travelerUserId, id);
+            var paymentOrder = await _paymentService.CreatePayPalOrderAsync(id, travelerUserId);
+
+            var result = new ConfirmBookingAndPayResponseDto
+            {
+                Booking = booking,
+                PaymentOrder = paymentOrder
+            };
+
+            return Ok(ApiResponse<ConfirmBookingAndPayResponseDto>.SuccessResponse(
+                result,
+                "Booking confirmed and PayPal order created."));
         }
         catch (KeyNotFoundException ex)      { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
         catch (UnauthorizedAccessException)  { return Forbid(); }
@@ -94,7 +126,7 @@ public class BookingsController : ApiControllerBase
 
     /// <summary>Traveler lấy danh sách bookings của mình: GET /api/Bookings/my/traveler</summary>
     [HttpGet("my/traveler")]
-    [Authorize(Roles = "Traveler")]
+    [Authorize(Roles = "User")]
     [SwaggerOperation(Summary = "Traveler lấy danh sách bookings của mình")]
     public async Task<IActionResult> GetMyBookingsAsTraveler()
     {

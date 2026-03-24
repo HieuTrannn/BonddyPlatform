@@ -127,6 +127,24 @@ public class BookingService : IBookingService
         return ToDto(booking);
     }
 
+    public async Task<BookingResponseDto> EnsurePendingPaymentAsync(Guid travelerUserId, Guid bookingId)
+    {
+        var booking = await _uow.Bookings.GetByIdWithDetailsAsync(bookingId)
+            ?? throw new KeyNotFoundException("Booking not found.");
+
+        if (booking.TravelerUserId != travelerUserId)
+            throw new UnauthorizedAccessException("Only the traveler can confirm this booking.");
+
+        if (booking.Status == BookingStatus.PendingPayment)
+            return ToDto(booking);
+
+        if (booking.Status != BookingStatus.PendingCustomerConfirm)
+            throw new InvalidOperationException(
+                $"Booking cannot move to payment from status '{booking.Status}'.");
+
+        return await ConfirmByTravelerAsync(travelerUserId, bookingId);
+    }
+
     // ─── Queries ──────────────────────────────────────────────────────────────
 
     public async Task<BookingResponseDto?> GetByIdAsync(Guid id)
