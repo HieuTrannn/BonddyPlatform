@@ -29,6 +29,8 @@ namespace BonddyPlatform.Repositories.Implements
         public IPaymentRepository Payments { get; }
         public IReviewRepository Reviews { get; }
         public IIncidentRepository Incidents { get; }
+        public IServicePackageRepository ServicePackages { get; }
+        public IBuddySubscriptionRepository BuddySubscriptions { get; }
 
         public UnitOfWork(
             BonddyDbContext context,
@@ -48,7 +50,9 @@ namespace BonddyPlatform.Repositories.Implements
             IBookingRepository bookingRepository,
             IPaymentRepository paymentRepository,
             IReviewRepository reviewRepository,
-            IIncidentRepository incidentRepository)
+            IIncidentRepository incidentRepository,
+            IServicePackageRepository servicePackageRepository,
+            IBuddySubscriptionRepository buddySubscriptionRepository)
         {
             _context = context;
             Contacts = contactRepository;
@@ -68,6 +72,8 @@ namespace BonddyPlatform.Repositories.Implements
             Payments = paymentRepository;
             Reviews = reviewRepository;
             Incidents = incidentRepository;
+            ServicePackages = servicePackageRepository;
+            BuddySubscriptions = buddySubscriptionRepository;
         }
 
         public Task<int> SaveChangesAsync()

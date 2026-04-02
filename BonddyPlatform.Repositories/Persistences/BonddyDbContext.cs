@@ -26,6 +26,8 @@ namespace BonddyPlatform.Repositories.Persistences
         public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
         public DbSet<Notification> Notifications => Set<Notification>();
         public DbSet<ChatRoomUserState> ChatRoomUserStates => Set<ChatRoomUserState>();
+        public DbSet<ServicePackage> ServicePackages => Set<ServicePackage>();
+        public DbSet<BuddySubscription> BuddySubscriptions => Set<BuddySubscription>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -478,6 +480,77 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.HasIndex(x => x.UserId);
             });
 
+            modelBuilder.Entity<ServicePackage>(entity =>
+            {
+                entity.ToTable("ServicePackages");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+                entity.Property(x => x.Description).HasMaxLength(500);
+                entity.Property(x => x.PricePerMonth).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+                entity.Property(x => x.CommissionRate).HasColumnType("decimal(5,2)").IsRequired();
+                entity.Property(x => x.HasChatAccess).IsRequired();
+                entity.Property(x => x.HasSearchPriority).IsRequired();
+                entity.Property(x => x.HasPrioritySupport).IsRequired();
+                entity.Property(x => x.HasProductFeedback).IsRequired();
+                entity.Property(x => x.SortOrder).IsRequired();
+                entity.Property(x => x.IsActive).IsRequired();
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.Property(x => x.Features)
+                    .HasConversion(
+                        v => System.Text.Json.JsonSerializer.Serialize(v ?? new List<string>(), (System.Text.Json.JsonSerializerOptions?)null),
+                        v => System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>()
+                    )
+                    .HasColumnType("jsonb")
+                    .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                        (a, b) => a != null && b != null && a.SequenceEqual(b),
+                        v => v.Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
+                        v => v.ToList()));
+
+                entity.HasIndex(x => x.Name).IsUnique();
+                entity.HasIndex(x => x.IsActive);
+            });
+
+            modelBuilder.Entity<BuddySubscription>(entity =>
+            {
+                entity.ToTable("BuddySubscriptions");
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.StartDate).IsRequired();
+                entity.Property(x => x.EndDate).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.PaymentMethod).IsRequired();
+                entity.Property(x => x.AmountPaid).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+                entity.Property(x => x.ExternalPaymentRef).HasMaxLength(200);
+                entity.Property(x => x.CreatedAt).IsRequired();
+
+                entity.HasOne(x => x.Buddy)
+                    .WithMany()
+                    .HasForeignKey(x => x.BuddyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ServicePackage)
+                    .WithMany()
+                    .HasForeignKey(x => x.ServicePackageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.DowngradeToPackage)
+                    .WithMany()
+                    .HasForeignKey(x => x.DowngradeToPackageId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Property(x => x.IsCancelledAtEndOfCycle).IsRequired().HasDefaultValue(false);
+
+                entity.HasIndex(x => new { x.BuddyId, x.Status });
+                entity.HasIndex(x => new { x.ServicePackageId, x.Status });
+                entity.HasIndex(x => x.EndDate);
+                entity.HasIndex(x => x.ExternalPaymentRef);
+            });
+
             SeedDefaultData(modelBuilder);
         }
 
@@ -515,6 +588,90 @@ namespace BonddyPlatform.Repositories.Persistences
                 new UserRole { Id = new Guid("00000000-0000-0000-0001-000000000004"), UserId = adminUserId, Role = Role.User,   AssignedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
             };
             modelBuilder.Entity<UserRole>().HasData(roleSeeds);
+
+            // ── Seed Service Packages ────────────────────────────────────────
+            var starterPackageId = new Guid("00000000-0000-0000-0002-000000000001");
+            var proPackageId     = new Guid("00000000-0000-0000-0002-000000000002");
+            var founderPackageId = new Guid("00000000-0000-0000-0002-000000000003");
+            var seedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            modelBuilder.Entity<ServicePackage>().HasData(
+                new ServicePackage
+                {
+                    Id = starterPackageId,
+                    Name = "Starter",
+                    Description = "Dành cho buddy mới bắt đầu, muốn thử trải nghiệm nền tảng.",
+                    PricePerMonth = 49000m,
+                    Currency = "VND",
+                    CommissionRate = 0.20m,
+                    HasChatAccess = true,
+                    HasSearchPriority = false,
+                    HasPrioritySupport = false,
+                    HasProductFeedback = false,
+                    MaxSlots = null,
+                    SortOrder = 1,
+                    IsActive = true,
+                    Features = new List<string>
+                    {
+                        "Profile xuất hiện trên nền tảng",
+                        "Không giới hạn booking",
+                        "Commission 20%",
+                        "Chat với khách qua app"
+                    },
+                    CreatedAt = seedDate
+                },
+                new ServicePackage
+                {
+                    Id = proPackageId,
+                    Name = "Pro",
+                    Description = "Dành cho buddy muốn tăng thu nhập và xây dựng thương hiệu cá nhân.",
+                    PricePerMonth = 99000m,
+                    Currency = "VND",
+                    CommissionRate = 0.10m,
+                    HasChatAccess = true,
+                    HasSearchPriority = true,
+                    HasPrioritySupport = false,
+                    HasProductFeedback = false,
+                    MaxSlots = null,
+                    SortOrder = 2,
+                    IsActive = true,
+                    Features = new List<string>
+                    {
+                        "Profile xuất hiện trên nền tảng",
+                        "Không giới hạn booking",
+                        "Commission chỉ 10%",
+                        "Chat với khách qua app",
+                        "Ưu tiên xuất hiện trong tìm kiếm"
+                    },
+                    CreatedAt = seedDate
+                },
+                new ServicePackage
+                {
+                    Id = founderPackageId,
+                    Name = "Founder",
+                    Description = "Chỉ 30 suất. Đặc quyền early adopter dành cho buddy đầu tiên của Bonddy.",
+                    PricePerMonth = 149000m,
+                    Currency = "VND",
+                    CommissionRate = 0.00m,
+                    HasChatAccess = true,
+                    HasSearchPriority = true,
+                    HasPrioritySupport = true,
+                    HasProductFeedback = true,
+                    MaxSlots = 30,
+                    SortOrder = 3,
+                    IsActive = true,
+                    Features = new List<string>
+                    {
+                        "Tất cả tính năng của Pro",
+                        "0% commission — giữ 100% thu nhập",
+                        "Xuất hiện đầu tiên trong tìm kiếm",
+                        "Hỗ trợ trực tiếp từ team Bonddy",
+                        "Góp ý định hướng sản phẩm",
+                        "Chỉ 30 suất — đóng khi đủ"
+                    },
+                    CreatedAt = seedDate
+                }
+            );
         }
     }
 }

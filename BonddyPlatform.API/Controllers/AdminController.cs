@@ -141,12 +141,12 @@ public class AdminController : ApiControllerBase
     // ─── BUDDIES ─────────────────────────────────────────────────────────────
 
     [HttpGet("buddies")]
-    [SwaggerOperation(Summary = "Admin: lấy toàn bộ danh sách buddies")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
-    public async Task<IActionResult> GetBuddies()
+    [SwaggerOperation(Summary = "Admin: lấy danh sách buddies (paged)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
+    public async Task<IActionResult> GetBuddies([FromQuery] BuddySearchRequestDto request)
     {
-        var result = await _buddyService.GetAllAsync();
-        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Buddies fetched successfully"));
+        var result = await _buddyService.GetPagedAsync(request);
+        return Ok(ApiResponse<object>.SuccessResponse(result, "Buddies fetched successfully"));
     }
 
     [HttpGet("buddies/{id:guid}")]

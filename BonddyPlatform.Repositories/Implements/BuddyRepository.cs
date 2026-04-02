@@ -27,4 +27,10 @@ public class BuddyRepository : GenericRepository<Buddy>, IBuddyRepository
         => await _context.Buddies
             .Include(b => b.User)
             .FirstOrDefaultAsync(b => b.Id == id);
+
+    public async Task<IEnumerable<Buddy>> GetAllWithUserAsync()
+        => await _context.Buddies
+            .Include(b => b.User)
+            .OrderByDescending(b => b.CreatedAt)
+            .ToListAsync();
 }

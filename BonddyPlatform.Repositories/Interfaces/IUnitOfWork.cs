@@ -26,6 +26,8 @@ namespace BonddyPlatform.Repositories.Interfaces
         IPaymentRepository Payments { get; }
         IReviewRepository Reviews { get; }
         IIncidentRepository Incidents { get; }
+        IServicePackageRepository ServicePackages { get; }
+        IBuddySubscriptionRepository BuddySubscriptions { get; }
         Task<int> SaveChangesAsync();
     }
 }
