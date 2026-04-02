@@ -32,6 +32,7 @@ public class BookingsController : ApiControllerBase
     [HttpPost]
     [Authorize(Roles = "Buddy")]
     [SwaggerOperation(Summary = "Buddy tạo booking từ chat (TripRequestId optional)")]
+    [SwaggerResponse(201, "Created", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> Create([FromBody] BookingCreateRequestDto dto)
     {
         try
@@ -53,6 +54,7 @@ public class BookingsController : ApiControllerBase
     [HttpPost("/api/TripRequests/{tripRequestId:guid}/booking")]
     [Authorize(Roles = "Buddy")]
     [SwaggerOperation(Summary = "Buddy tạo booking từ TripRequest (sau khi đã trao đổi trong chat)")]
+    [SwaggerResponse(201, "Created", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> CreateFromTripRequest(
         Guid tripRequestId, [FromBody] BookingCreateFromTripRequestDto dto)
     {
@@ -77,6 +79,7 @@ public class BookingsController : ApiControllerBase
     [HttpPost("{id:guid}/confirm")]
     [Authorize(Roles = "User")]
     [SwaggerOperation(Summary = "Traveler xác nhận booking → chuyển sang PendingPayment")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> ConfirmByTraveler(Guid id)
     {
         try
@@ -97,6 +100,7 @@ public class BookingsController : ApiControllerBase
     [HttpPost("{id:guid}/confirm-and-create-paypal-order")]
     [Authorize(Roles = "User")]
     [SwaggerOperation(Summary = "Traveler xác nhận booking và tạo PayPal order ngay")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ConfirmBookingAndPayResponseDto>))]
     public async Task<IActionResult> ConfirmAndCreatePayPalOrder(Guid id)
     {
         try
@@ -125,6 +129,7 @@ public class BookingsController : ApiControllerBase
     /// <summary>Lấy chi tiết một booking: GET /api/Bookings/{id}</summary>
     [HttpGet("{id:guid}")]
     [SwaggerOperation(Summary = "Lấy chi tiết một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _bookingService.GetByIdAsync(id);
@@ -138,6 +143,7 @@ public class BookingsController : ApiControllerBase
     [HttpGet("/api/Trips/{tripId:guid}/bookings")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Lấy tất cả bookings của một trip (Admin/CS)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BookingResponseDto>>))]
     public async Task<IActionResult> GetByTrip(Guid tripId)
     {
         var result = await _bookingService.GetByTripIdAsync(tripId);
@@ -150,6 +156,7 @@ public class BookingsController : ApiControllerBase
     [HttpGet("my/traveler")]
     [Authorize(Roles = "User")]
     [SwaggerOperation(Summary = "Traveler lấy danh sách bookings của mình")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BookingResponseDto>>))]
     public async Task<IActionResult> GetMyBookingsAsTraveler()
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -161,6 +168,7 @@ public class BookingsController : ApiControllerBase
     [HttpGet("my/buddy")]
     [Authorize(Roles = "Buddy")]
     [SwaggerOperation(Summary = "Buddy lấy danh sách bookings của mình")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BookingResponseDto>>))]
     public async Task<IActionResult> GetMyBookingsAsBuddy()
     {
         try
@@ -178,6 +186,7 @@ public class BookingsController : ApiControllerBase
     [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Admin/CS cập nhật trạng thái booking (state machine)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] BookingUpdateStatusRequestDto dto)
     {
         try

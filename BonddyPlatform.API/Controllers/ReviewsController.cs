@@ -24,6 +24,7 @@ public class ReviewsController : ApiControllerBase
     [HttpPost("/api/Bookings/{bookingId:guid}/review")]
     [SwaggerOperation(Summary = "Traveler tạo review cho booking đã Completed")]
     [Authorize(Roles = "User")]
+    [SwaggerResponse(201, "Created", typeof(ApiResponse<ReviewResponseDto>))]
     public async Task<IActionResult> Create(Guid bookingId, [FromBody] ReviewCreateRequestDto dto)
     {
         dto.BookingId = bookingId;
@@ -52,6 +53,7 @@ public class ReviewsController : ApiControllerBase
     /// <summary>Lấy review của booking: GET /api/Bookings/{bookingId}/review</summary>
     [HttpGet("/api/Bookings/{bookingId:guid}/review")]
     [SwaggerOperation(Summary = "Lấy review của một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ReviewResponseDto>))]
     public async Task<IActionResult> GetByBooking(Guid bookingId)
     {
         var result = await _reviewService.GetByBookingIdAsync(bookingId);

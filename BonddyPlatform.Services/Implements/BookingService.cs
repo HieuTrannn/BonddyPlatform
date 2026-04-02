@@ -7,7 +7,7 @@ namespace BonddyPlatform.Services.Implements;
 
 public class BookingService : IBookingService
 {
-    private const double PlatformFeeRate = 0.20;          // 10% platform fee
+    private const double PlatformFeeRate = 0.20;          // 20% platform fee
     private const int PaymentDeadlineHours = 24;           // 24h for traveler to pay
 
     private readonly IUnitOfWork _uow;

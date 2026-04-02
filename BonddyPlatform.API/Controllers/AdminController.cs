@@ -44,6 +44,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("users")]
     [SwaggerOperation(Summary = "Admin: lấy danh sách users (paged)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
     public async Task<IActionResult> GetUsers([FromQuery] UserSearchRequestDto request)
     {
         var result = await _userService.GetPagedAsync(request);
@@ -52,6 +53,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("users/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: lấy chi tiết một user")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     public async Task<IActionResult> GetUser(Guid id)
     {
         var result = await _userService.GetByIdAsync(id);
@@ -61,6 +63,7 @@ public class AdminController : ApiControllerBase
 
     [HttpPut("users/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: cập nhật thông tin user")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequestDto dto)
     {
         var result = await _userService.UpdateAsync(id, dto);
@@ -69,6 +72,7 @@ public class AdminController : ApiControllerBase
 
     [HttpDelete("users/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: xóa user")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         await _userService.DeleteAsync(id);
@@ -79,6 +83,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("trips")]
     [SwaggerOperation(Summary = "Admin: lấy danh sách trips (cho CS/Admin)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
     public async Task<IActionResult> GetTrips([FromQuery] TripSearchRequestDto request)
     {
         var result = await _tripService.GetTripsForOpsAsync(request);
@@ -87,6 +92,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("trips/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: lấy chi tiết một trip")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<TripResponseDto>))]
     public async Task<IActionResult> GetTrip(Guid id)
     {
         var result = await _tripService.GetByIdAsync(id);
@@ -98,6 +104,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("trips/{tripId:guid}/bookings")]
     [SwaggerOperation(Summary = "Admin: lấy danh sách bookings theo trip")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BookingResponseDto>>))]
     public async Task<IActionResult> GetBookingsByTrip(Guid tripId)
     {
         var result = await _bookingService.GetByTripIdAsync(tripId);
@@ -106,6 +113,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("bookings/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: lấy chi tiết một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> GetBooking(Guid id)
     {
         var result = await _bookingService.GetByIdAsync(id);
@@ -115,6 +123,7 @@ public class AdminController : ApiControllerBase
 
     [HttpPatch("bookings/{id:guid}/status")]
     [SwaggerOperation(Summary = "Admin: cập nhật trạng thái booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BookingResponseDto>))]
     public async Task<IActionResult> UpdateBookingStatus(Guid id, [FromBody] BookingUpdateStatusRequestDto dto)
     {
         try
@@ -133,6 +142,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("buddies")]
     [SwaggerOperation(Summary = "Admin: lấy toàn bộ danh sách buddies")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
     public async Task<IActionResult> GetBuddies()
     {
         var result = await _buddyService.GetAllAsync();
@@ -141,6 +151,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("buddies/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: lấy chi tiết một buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> GetBuddy(Guid id)
     {
         var result = await _buddyService.GetByIdAsync(id);
@@ -150,6 +161,7 @@ public class AdminController : ApiControllerBase
 
     [HttpPost("buddies/{userId:guid}")]
     [SwaggerOperation(Summary = "Admin: đăng ký buddy profile mới cho một user")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> RegisterBuddy(Guid userId, [FromBody] BuddyRegisterRequestDto dto)
     {
         var result = await _buddyService.RegisterAsync(userId, dto);
@@ -159,6 +171,7 @@ public class AdminController : ApiControllerBase
 
     [HttpPut("buddies/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: cập nhật buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> UpdateBuddy(Guid id, [FromBody] BuddyUpdateRequestDto dto)
     {
         var result = await _buddyService.UpdateAsync(id, dto);
@@ -168,6 +181,7 @@ public class AdminController : ApiControllerBase
 
     [HttpDelete("buddies/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: xóa buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
     public async Task<IActionResult> DeleteBuddy(Guid id)
     {
         var ok = await _buddyService.DeleteAsync(id);
@@ -179,6 +193,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("bookings/{bookingId:guid}/review")]
     [SwaggerOperation(Summary = "Admin: xem review của một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ReviewResponseDto>))]
     public async Task<IActionResult> GetReview(Guid bookingId)
     {
         var result = await _reviewService.GetByBookingIdAsync(bookingId);
@@ -190,6 +205,7 @@ public class AdminController : ApiControllerBase
 
     [HttpGet("bookings/{bookingId:guid}/incidents")]
     [SwaggerOperation(Summary = "Admin: xem danh sách incidents của một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<IncidentResponseDto>>))]
     public async Task<IActionResult> GetIncidents(Guid bookingId)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -199,6 +215,7 @@ public class AdminController : ApiControllerBase
 
     [HttpPatch("incidents/{id:guid}/resolve")]
     [SwaggerOperation(Summary = "Admin: cập nhật trạng thái incident")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IncidentResponseDto>))]
     public async Task<IActionResult> ResolveIncident(Guid id, [FromBody] IncidentResolveRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();

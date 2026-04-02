@@ -32,8 +32,8 @@ public class Booking
     public decimal Price { get; set; }          // Tổng tiền buddy offer
     [MaxLength(10)]
     public string Currency { get; set; } = "USD"; // Default currency is USD
-    public decimal PlatformFeeAmount { get; set; } // 10% of Price
-    public decimal TotalAmount { get; set; }    // Price + PlatformFee
+    public decimal PlatformFeeAmount { get; set; } // 20% of Price
+    public decimal TotalAmount { get; set; }    // Price + PlatformFeeAmount
 
     [MaxLength(2000)]
     public string? Includes { get; set; }       // Dịch vụ bao gồm

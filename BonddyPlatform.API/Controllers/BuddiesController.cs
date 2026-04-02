@@ -23,6 +23,7 @@ public class BuddiesController : ApiControllerBase
     /// <summary>Lấy danh sách buddy đang active (dùng cho trang browse buddies)</summary>
     [HttpGet]
     [SwaggerOperation(Summary = "Lấy danh sách buddy đang active")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
     public async Task<IActionResult> GetAllActive()
     {
         var result = await _buddyService.GetAllActiveAsync();
@@ -32,6 +33,7 @@ public class BuddiesController : ApiControllerBase
     /// <summary>Lấy chi tiết một buddy theo BuddyId</summary>
     [HttpGet("{id:guid}")]
     [SwaggerOperation(Summary = "Lấy chi tiết một buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _buddyService.GetByIdAsync(id);
@@ -42,6 +44,7 @@ public class BuddiesController : ApiControllerBase
     /// <summary>Lấy buddy theo UserId</summary>
     [HttpGet("by-user/{userId:guid}")]
     [SwaggerOperation(Summary = "Lấy buddy theo UserId")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> GetByUserId(Guid userId)
     {
         var result = await _buddyService.GetByUserIdAsync(userId);
@@ -55,6 +58,7 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "Buddy")]
     [HttpGet("me")]
     [SwaggerOperation(Summary = "Buddy xem full profile của mình")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> GetMyProfile()
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -71,6 +75,7 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "Buddy")]
     [HttpPut("update-profile")]
     [SwaggerOperation(Summary = "Buddy cập nhật full profile (user info + buddy fields, JSON)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> UpdateMyProfile([FromBody] BuddySelfUpdateRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -84,6 +89,7 @@ public class BuddiesController : ApiControllerBase
     [HttpPost("upload-avatar")]
     [Consumes("multipart/form-data")]
     [SwaggerOperation(Summary = "Buddy upload/thay đổi avatar (form-data, dùng trong update profile)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> UploadAvatar(IFormFile avatar)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -98,6 +104,7 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "User")]
     [HttpPost("register-as-buddy")]
     [SwaggerOperation(Summary = "User đăng ký làm buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> RegisterAsBuddy([FromBody] BuddyRegisterRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -110,6 +117,7 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "Admin")]
     [HttpPut("{id:guid}")]
     [SwaggerOperation(Summary = "Admin cập nhật buddy profile")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> Update(Guid id, [FromBody] BuddyUpdateRequestDto dto)
     {
         var result = await _buddyService.UpdateAsync(id, dto);
@@ -121,6 +129,7 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
     [SwaggerOperation(Summary = "Admin xóa buddy profile")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
     public async Task<IActionResult> Delete(Guid id)
     {
         var ok = await _buddyService.DeleteAsync(id);
