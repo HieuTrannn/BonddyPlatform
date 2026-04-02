@@ -7,7 +7,8 @@ namespace BonddyPlatform.Services.Implements;
 
 public class BookingService : IBookingService
 {
-    private const double PlatformFeeRate = 0.20;          // 20% platform fee
+    /// <summary>Default platform fee for buddies without any subscription package.</summary>
+    private const decimal DefaultPlatformFeeRate = 0.25m;  // 25% — Free (no package)
     private const int PaymentDeadlineHours = 24;           // 24h for traveler to pay
 
     private readonly IUnitOfWork _uow;
@@ -30,6 +31,19 @@ public class BookingService : IBookingService
     {
         _uow = uow;
         _chatService = chatService;
+    }
+
+    /// <summary>
+    /// Lấy tỉ lệ phí nền tảng từ gói subscription active của buddy.
+    /// Free = 25%, Starter = 20%, Pro = 10%, Founder = 0%.
+    /// </summary>
+    private async Task<decimal> GetPlatformFeeRateForBuddyAsync(Guid buddyId)
+    {
+        var activeSub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(buddyId);
+        if (activeSub?.ServicePackage is null)
+            return DefaultPlatformFeeRate; // Free → 25%
+
+        return activeSub.ServicePackage.CommissionRate; // From package: 0.20, 0.10, 0.00
     }
 
     public async Task<BookingResponseDto> CreateAsync(Guid buddyUserId, BookingCreateRequestDto dto)
@@ -82,8 +96,9 @@ public class BookingService : IBookingService
         var chatRooms = await _uow.ChatRooms.FindAsync(r => r.TripRequestId == tripRequestId);
         var chatRoomId = chatRooms.FirstOrDefault()?.Id;
 
-        // 4. Calculate amounts
-        var platformFee = Math.Round(dto.Price * (decimal)PlatformFeeRate, 2);
+        // 4. Calculate amounts — commission based on buddy's subscription package
+        var feeRate = await GetPlatformFeeRateForBuddyAsync(buddy.Id);
+        var platformFee = Math.Round(dto.Price * feeRate, 2);
         var total = dto.Price + platformFee;
 
         // 5. Build Booking entity (snapshot from Trip + buddy's adjustments)
@@ -184,7 +199,8 @@ public class BookingService : IBookingService
         await _uow.TripRequests.AddAsync(tripRequest);
         await _uow.SaveChangesAsync();
 
-        var platformFee = Math.Round(dto.Price * (decimal)PlatformFeeRate, 2);
+        var feeRate = await GetPlatformFeeRateForBuddyAsync(buddy.Id);
+        var platformFee = Math.Round(dto.Price * feeRate, 2);
         var total = dto.Price + platformFee;
 
         var booking = new Booking
