@@ -1,4 +1,5 @@
 using BonddyPlatform.Services.DTOs.BuddyDtos;
+using BonddyPlatform.Services.DTOs.Common;
 using Microsoft.AspNetCore.Http;
 
 namespace BonddyPlatform.Services.Interfaces;
@@ -6,6 +7,7 @@ namespace BonddyPlatform.Services.Interfaces;
 public interface IBuddyService
 {
     Task<BuddyResponseDto> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto);
+    Task<PagedResultDto<BuddyResponseDto>> GetPagedAsync(BuddySearchRequestDto request);
     Task<BuddyResponseDto?> GetByIdAsync(Guid id);
     Task<BuddyResponseDto?> GetByUserIdAsync(Guid userId);
     Task<IEnumerable<BuddyResponseDto>> GetAllActiveAsync();

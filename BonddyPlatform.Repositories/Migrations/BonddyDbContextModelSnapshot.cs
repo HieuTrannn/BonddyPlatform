@@ -159,6 +159,74 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("Buddies", (string)null);
                 });
 
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BuddySubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("BuddyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid?>("DowngradeToPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalPaymentRef")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsCancelledAtEndOfCycle")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ServicePackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DowngradeToPackageId");
+
+                    b.HasIndex("EndDate");
+
+                    b.HasIndex("ExternalPaymentRef");
+
+                    b.HasIndex("BuddyId", "Status");
+
+                    b.HasIndex("ServicePackageId", "Status");
+
+                    b.ToTable("BuddySubscriptions", (string)null);
+                });
+
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>
                 {
                     b.Property<Guid>("Id")
@@ -604,6 +672,128 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.ToTable("Reviews", (string)null);
                 });
 
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.ServicePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Features")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("HasChatAccess")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasPrioritySupport")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasProductFeedback")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasSearchPriority")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MaxSlots")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("PricePerMonth")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ServicePackages", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0002-000000000001"),
+                            CommissionRate = 0.20m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "VND",
+                            Description = "Dành cho buddy mới bắt đầu, muốn thử trải nghiệm nền tảng.",
+                            Features = "[\"Profile xu\\u1EA5t hi\\u1EC7n tr\\u00EAn n\\u1EC1n t\\u1EA3ng\",\"Kh\\u00F4ng gi\\u1EDBi h\\u1EA1n booking\",\"Commission 20%\",\"Chat v\\u1EDBi kh\\u00E1ch qua app\"]",
+                            HasChatAccess = true,
+                            HasPrioritySupport = false,
+                            HasProductFeedback = false,
+                            HasSearchPriority = false,
+                            IsActive = true,
+                            Name = "Starter",
+                            PricePerMonth = 49000m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0002-000000000002"),
+                            CommissionRate = 0.10m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "VND",
+                            Description = "Dành cho buddy muốn tăng thu nhập và xây dựng thương hiệu cá nhân.",
+                            Features = "[\"Profile xu\\u1EA5t hi\\u1EC7n tr\\u00EAn n\\u1EC1n t\\u1EA3ng\",\"Kh\\u00F4ng gi\\u1EDBi h\\u1EA1n booking\",\"Commission ch\\u1EC9 10%\",\"Chat v\\u1EDBi kh\\u00E1ch qua app\",\"\\u01AFu ti\\u00EAn xu\\u1EA5t hi\\u1EC7n trong t\\u00ECm ki\\u1EBFm\"]",
+                            HasChatAccess = true,
+                            HasPrioritySupport = false,
+                            HasProductFeedback = false,
+                            HasSearchPriority = true,
+                            IsActive = true,
+                            Name = "Pro",
+                            PricePerMonth = 99000m,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0002-000000000003"),
+                            CommissionRate = 0.00m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "VND",
+                            Description = "Chỉ 30 suất. Đặc quyền early adopter dành cho buddy đầu tiên của Bonddy.",
+                            Features = "[\"T\\u1EA5t c\\u1EA3 t\\u00EDnh n\\u0103ng c\\u1EE7a Pro\",\"0% commission \\u2014 gi\\u1EEF 100% thu nh\\u1EADp\",\"Xu\\u1EA5t hi\\u1EC7n \\u0111\\u1EA7u ti\\u00EAn trong t\\u00ECm ki\\u1EBFm\",\"H\\u1ED7 tr\\u1EE3 tr\\u1EF1c ti\\u1EBFp t\\u1EEB team Bonddy\",\"G\\u00F3p \\u00FD \\u0111\\u1ECBnh h\\u01B0\\u1EDBng s\\u1EA3n ph\\u1EA9m\",\"Ch\\u1EC9 30 su\\u1EA5t \\u2014 \\u0111\\u00F3ng khi \\u0111\\u1EE7\"]",
+                            HasChatAccess = true,
+                            HasPrioritySupport = true,
+                            HasProductFeedback = true,
+                            HasSearchPriority = true,
+                            IsActive = true,
+                            MaxSlots = 30,
+                            Name = "Founder",
+                            PricePerMonth = 149000m,
+                            SortOrder = 3
+                        });
+                });
+
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.Trip", b =>
                 {
                     b.Property<Guid>("Id")
@@ -880,6 +1070,32 @@ namespace BonddyPlatform.Repositories.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BonddyPlatform.Repositories.Models.BuddySubscription", b =>
+                {
+                    b.HasOne("BonddyPlatform.Repositories.Models.Buddy", "Buddy")
+                        .WithMany()
+                        .HasForeignKey("BuddyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.ServicePackage", "DowngradeToPackage")
+                        .WithMany()
+                        .HasForeignKey("DowngradeToPackageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.ServicePackage", "ServicePackage")
+                        .WithMany()
+                        .HasForeignKey("ServicePackageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Buddy");
+
+                    b.Navigation("DowngradeToPackage");
+
+                    b.Navigation("ServicePackage");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.ChatRoom", b =>

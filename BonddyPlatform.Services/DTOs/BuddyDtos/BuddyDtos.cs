@@ -1,4 +1,5 @@
 using BonddyPlatform.Repositories.Models;
+using BonddyPlatform.Services.DTOs.Common;
 
 namespace BonddyPlatform.Services.DTOs.BuddyDtos;
 
@@ -9,6 +10,13 @@ public class BuddyRegisterRequestDto
     public decimal CostPerHour { get; set; }
     public List<string> Languages { get; set; } = new();
     public string Bio { get; set; } = string.Empty;
+}
+
+/// <summary>Search request DTO for paginated buddy listing.</summary>
+public class BuddySearchRequestDto : BaseSearchRequestDto
+{
+    /// <summary>Filter by active status</summary>
+    public bool? IsActive { get; set; }
 }
 
 /// <summary>Used by Admin to update only buddy-specific fields.</summary>

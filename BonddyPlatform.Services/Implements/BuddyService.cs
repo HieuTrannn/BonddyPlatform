@@ -1,8 +1,11 @@
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Services.DTOs.BuddyDtos;
+using BonddyPlatform.Services.DTOs.Common;
+using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -51,6 +54,60 @@ public class BuddyService : IBuddyService
         return ToDto(full!);
     }
 
+    public async Task<PagedResultDto<BuddyResponseDto>> GetPagedAsync(BuddySearchRequestDto request)
+    {
+        var query = _uow.Buddies.GetQueryable().Include(b => b.User).AsQueryable();
+
+        // Search across User.FullName, User.Email, Bio
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim().ToLower();
+            query = query.Where(b =>
+                (b.User != null && (
+                    b.User.FullName.ToLower().Contains(search) ||
+                    b.User.Email.ToLower().Contains(search)
+                )) ||
+                (b.Bio != null && b.Bio.ToLower().Contains(search))
+            );
+        }
+
+        // Filter
+        if (request.IsActive.HasValue)
+            query = query.Where(b => b.IsActive == request.IsActive.Value);
+
+        var totalCount = await query.CountAsync();
+
+        // Sort
+        query = (request.SortBy?.ToLower()) switch
+        {
+            "fullname" => request.SortOrder == "asc"
+                ? query.OrderBy(b => b.User != null ? b.User.FullName : "")
+                : query.OrderByDescending(b => b.User != null ? b.User.FullName : ""),
+            "costperhour" => request.SortOrder == "asc"
+                ? query.OrderBy(b => b.CostPerHour)
+                : query.OrderByDescending(b => b.CostPerHour),
+            "rate" => request.SortOrder == "asc"
+                ? query.OrderBy(b => b.Rate)
+                : query.OrderByDescending(b => b.Rate),
+            _ => request.SortOrder == "asc"
+                ? query.OrderBy(b => b.CreatedAt)
+                : query.OrderByDescending(b => b.CreatedAt)
+        };
+
+        var items = await query
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync();
+
+        return new PagedResultDto<BuddyResponseDto>
+        {
+            Items = items.Select(ToDto),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
+    }
+
     public async Task<BuddyResponseDto?> GetByIdAsync(Guid id)
     {
         var buddy = await _uow.Buddies.GetByIdWithUserAsync(id);
@@ -71,7 +128,7 @@ public class BuddyService : IBuddyService
 
     public async Task<IEnumerable<BuddyResponseDto>> GetAllAsync()
     {
-        var buddies = await _uow.Buddies.GetAllAsync();
+        var buddies = await _uow.Buddies.GetAllWithUserAsync();
         return buddies.Select(ToDto);
     }
 
