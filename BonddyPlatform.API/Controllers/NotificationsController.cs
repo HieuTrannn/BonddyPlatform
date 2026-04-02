@@ -54,6 +54,7 @@ public class NotificationsController : ApiControllerBase
     /// </summary>
     [HttpPost("{id:guid}/read")]
     [SwaggerOperation(Summary = "Mark notification as read")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse))]
     public async Task<IActionResult> MarkRead(Guid id)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -68,6 +69,7 @@ public class NotificationsController : ApiControllerBase
     /// </summary>
     [HttpPost("read-all")]
     [SwaggerOperation(Summary = "Mark all notifications as read")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse))]
     public async Task<IActionResult> MarkAllRead()
     {
         var userId = GetCurrentUserIdOrThrow();

@@ -23,6 +23,7 @@ public class IncidentsController : ApiControllerBase
     /// <summary>Báo cáo sự cố: POST /api/Bookings/{bookingId}/incidents</summary>
     [HttpPost("/api/Bookings/{bookingId:guid}/incidents")]
     [SwaggerOperation(Summary = "Traveler/CS/Buddy báo cáo sự cố trên booking")]
+    [SwaggerResponse(201, "Created", typeof(ApiResponse<IncidentResponseDto>))]
     public async Task<IActionResult> Create(Guid bookingId, [FromBody] IncidentCreateRequestDto dto)
     {
         dto.BookingId = bookingId;
@@ -43,6 +44,7 @@ public class IncidentsController : ApiControllerBase
     /// <summary>Lấy danh sách sự cố theo booking: GET /api/Bookings/{bookingId}/incidents</summary>
     [HttpGet("/api/Bookings/{bookingId:guid}/incidents")]
     [SwaggerOperation(Summary = "Lấy danh sách sự cố theo booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<IncidentResponseDto>>))]
     public async Task<IActionResult> GetByBooking(Guid bookingId)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -61,6 +63,7 @@ public class IncidentsController : ApiControllerBase
     [HttpPatch("{id:guid}/resolve")]
     [SwaggerOperation(Summary = "CS/Admin cập nhật trạng thái sự cố")]
     [Authorize(Roles = "Admin,CS")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IncidentResponseDto>))]
     public async Task<IActionResult> Resolve(Guid id, [FromBody] IncidentResolveRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();

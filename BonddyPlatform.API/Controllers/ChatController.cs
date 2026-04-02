@@ -53,6 +53,7 @@ public class ChatController : ApiControllerBase
     /// </summary>
     [HttpPost("rooms/{roomId:guid}/mark-read")]
     [SwaggerOperation(Summary = "Mark chat room as read")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse))]
     public async Task<IActionResult> MarkRoomRead(Guid roomId)
     {
         var userId = GetCurrentUserIdOrThrow();

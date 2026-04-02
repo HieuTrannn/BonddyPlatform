@@ -24,6 +24,7 @@ public class PaymentsController : ApiControllerBase
     [HttpPost("/api/Bookings/{bookingId:guid}/payment")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Tạo payment cho một booking")]
+    [SwaggerResponse(201, "Created", typeof(ApiResponse<PaymentResponseDto>))]
     public async Task<IActionResult> Create(Guid bookingId, [FromBody] PaymentCreateRequestDto dto)
     {
         dto.BookingId = bookingId;
@@ -47,6 +48,7 @@ public class PaymentsController : ApiControllerBase
     [HttpGet("/api/Bookings/{bookingId:guid}/payment")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Lấy payment của một booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PaymentResponseDto>))]
     public async Task<IActionResult> GetByBooking(Guid bookingId)
     {
         var result = await _paymentService.GetByBookingIdAsync(bookingId);
@@ -58,6 +60,7 @@ public class PaymentsController : ApiControllerBase
     [HttpGet("{id:guid}")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Lấy payment theo id")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PaymentResponseDto>))]
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await _paymentService.GetByIdAsync(id);
@@ -69,6 +72,7 @@ public class PaymentsController : ApiControllerBase
     [HttpPatch("{id:guid}/status")]
     [Authorize(Roles = "Admin,CS")]
     [SwaggerOperation(Summary = "Chuyển trạng thái payment (escrow)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PaymentResponseDto>))]
     public async Task<IActionResult> Transition(Guid id, [FromBody] PaymentTransitionRequestDto dto)
     {
         try
@@ -87,6 +91,7 @@ public class PaymentsController : ApiControllerBase
     [HttpPost("paypal/bookings/{bookingId:guid}/create-order")]
     [HttpPost("/api/Bookings/{bookingId:guid}/payment/paypal/create-order")]
     [SwaggerOperation(Summary = "Create PayPal order")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PayPalCreateOrderResponseDto>))]
     public async Task<IActionResult> CreatePayPalOrder(Guid bookingId)
     {
         var userId = GetCurrentUserIdOrThrow();
@@ -98,6 +103,8 @@ public class PaymentsController : ApiControllerBase
     [HttpPost("paypal/{paymentId:guid}/capture")]
     [HttpPost("/api/Bookings/payments/{paymentId:guid}/paypal/capture")]
     [SwaggerOperation(Summary = "Capture PayPal order")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PaymentResponseDto>))]
+    [SwaggerResponse(400, "Bad Request", typeof(ApiResponse<PaymentResponseDto>))]
     public async Task<IActionResult> CapturePayPalOrder(Guid paymentId, [FromBody] PayPalCaptureRequestDto dto)
     {
         try
@@ -124,6 +131,7 @@ public class PaymentsController : ApiControllerBase
     [AllowAnonymous]
     [HttpPost("paypal/webhook")]
     [SwaggerOperation(Summary = "PayPal webhook")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PayPalWebhookResultDto>))]
     public async Task<IActionResult> PayPalWebhook()
     {
         Request.EnableBuffering();

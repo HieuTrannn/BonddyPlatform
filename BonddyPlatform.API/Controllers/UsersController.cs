@@ -126,7 +126,7 @@ public class UsersController : ApiControllerBase
 
     [HttpDelete("{id:guid}")]
     [SwaggerOperation(Summary = "Delete user", Description = "Deletes a user by ID.")]
-    [SwaggerResponse(204, "No content")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse))]
     public async Task<IActionResult> Delete(Guid id)
     {
         await _service.DeleteAsync(id);
