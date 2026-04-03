@@ -18,15 +18,18 @@ public class ServicePackageService : IServicePackageService
     private readonly IUnitOfWork _uow;
     private readonly PayPalOptions _payPalOptions;
     private readonly ILogger<ServicePackageService> _logger;
+    private readonly IPayOsService _payOsService;
 
     public ServicePackageService(
         IUnitOfWork uow,
         IOptions<PayPalOptions> payPalOptions,
-        ILogger<ServicePackageService> logger)
+        ILogger<ServicePackageService> logger,
+        IPayOsService payOsService)
     {
         _uow = uow;
         _payPalOptions = payPalOptions.Value;
         _logger = logger;
+        _payOsService = payOsService;
     }
 
     // ─── Public ──────────────────────────────────────────────────────────────
@@ -146,7 +149,11 @@ public class ServicePackageService : IServicePackageService
 
     public async Task<object> SubscribeAsync(Guid userId, SubscribeRequestDto dto)
     {
-        EnsurePayPalConfigured();
+        var usePayOs = string.Equals(dto.PreferredPaymentMethod, "PayOS", StringComparison.OrdinalIgnoreCase);
+
+        // Chỉ kiểm tra PayPal config nếu user chọn PayPal
+        if (!usePayOs)
+            EnsurePayPalConfigured();
 
         var buddy = await _uow.Buddies.GetByUserIdAsync(userId)
             ?? throw new KeyNotFoundException("Buddy profile not found for current user.");
@@ -155,6 +162,10 @@ public class ServicePackageService : IServicePackageService
             ?? throw new KeyNotFoundException("Service package not found.");
         if (!newPackage.IsActive)
             throw new InvalidOperationException("Service package is not active.");
+
+        // PayOS chỉ hỗ trợ VND
+        if (usePayOs && !string.Equals(newPackage.Currency, "VND", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("PayOS chỉ hỗ trợ thanh toán VND. Vui lòng chọn PayPal cho gói USD.");
 
         // Check slot limit
         if (newPackage.MaxSlots.HasValue)
@@ -204,7 +215,7 @@ public class ServicePackageService : IServicePackageService
             // ─── UPGRADE: new package is more expensive → proration ──────────
             if (newPackage.PricePerMonth > currentPackage.PricePerMonth)
             {
-                return await HandleUpgradeAsync(buddy, activeSub, currentPackage, newPackage);
+                return await HandleUpgradeAsync(buddy, activeSub, currentPackage, newPackage, usePayOs);
             }
 
             // ─── DOWNGRADE: new package is cheaper → schedule end-of-cycle ───
@@ -212,13 +223,13 @@ public class ServicePackageService : IServicePackageService
         }
 
         // ─── NEW SUBSCRIPTION: no active plan → full price ───────────────────
-        return await CreateNewSubscriptionOrderAsync(buddy, newPackage);
+        return await CreateNewSubscriptionOrderAsync(buddy, newPackage, usePayOs);
     }
 
     // ─── Upgrade: proration + PayPal order for difference ────────────────────
 
-    private async Task<SubscriptionPayPalOrderResponseDto> HandleUpgradeAsync(
-        Buddy buddy, BuddySubscription activeSub, ServicePackage oldPkg, ServicePackage newPkg)
+    private async Task<object> HandleUpgradeAsync(
+        Buddy buddy, BuddySubscription activeSub, ServicePackage oldPkg, ServicePackage newPkg, bool usePayOs = false)
     {
         // Calculate proration
         var totalDays = (activeSub.EndDate - activeSub.StartDate).TotalDays;
@@ -252,7 +263,7 @@ public class ServicePackageService : IServicePackageService
             StartDate = DateTime.UtcNow,
             EndDate = activeSub.EndDate, // keep same billing cycle end
             Status = SubscriptionStatus.PendingPayment,
-            PaymentMethod = PaymentMethod.Wallet,
+            PaymentMethod = usePayOs ? PaymentMethod.PayOS : PaymentMethod.Wallet,
             AmountPaid = proratedCharge,
             Currency = newPkg.Currency,
             CreatedAt = DateTime.UtcNow
@@ -261,7 +272,17 @@ public class ServicePackageService : IServicePackageService
         await _uow.BuddySubscriptions.AddAsync(upgradeSub);
         await _uow.SaveChangesAsync();
 
-        // Create PayPal order for prorated amount
+        _logger.LogInformation(
+            "Upgrade proration: {OldPkg}→{NewPkg}, Credit: {Credit}, NewCost: {NewCost}, Charge: {Charge}",
+            oldPkg.Name, newPkg.Name, creditFromOld, costForNew, proratedCharge);
+
+        if (usePayOs)
+        {
+            return await CreatePayOsSubscriptionOrderAsync(upgradeSub, newPkg, proratedCharge,
+                isUpgrade: true, creditFromOld: creditFromOld);
+        }
+
+        // PayPal flow
         var chargeAmount = proratedCharge > 0 ? proratedCharge : 1; // PayPal min = 1 VND
         var description = $"Upgrade Bonddy {oldPkg.Name} → {newPkg.Name} (Prorated)";
 
@@ -272,10 +293,6 @@ public class ServicePackageService : IServicePackageService
         upgradeSub.UpdatedAt = DateTime.UtcNow;
         _uow.BuddySubscriptions.Update(upgradeSub);
         await _uow.SaveChangesAsync();
-
-        _logger.LogInformation(
-            "Upgrade proration: {OldPkg}→{NewPkg}, Credit: {Credit}, NewCost: {NewCost}, Charge: {Charge}",
-            oldPkg.Name, newPkg.Name, creditFromOld, costForNew, proratedCharge);
 
         return new SubscriptionPayPalOrderResponseDto
         {
@@ -320,8 +337,8 @@ public class ServicePackageService : IServicePackageService
 
     // ─── New subscription (no existing plan) ─────────────────────────────────
 
-    private async Task<SubscriptionPayPalOrderResponseDto> CreateNewSubscriptionOrderAsync(
-        Buddy buddy, ServicePackage package)
+    private async Task<object> CreateNewSubscriptionOrderAsync(
+        Buddy buddy, ServicePackage package, bool usePayOs = false)
     {
         var subscription = new BuddySubscription
         {
@@ -331,7 +348,7 @@ public class ServicePackageService : IServicePackageService
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddMonths(1),
             Status = SubscriptionStatus.PendingPayment,
-            PaymentMethod = PaymentMethod.Wallet,
+            PaymentMethod = usePayOs ? PaymentMethod.PayOS : PaymentMethod.Wallet,
             AmountPaid = package.PricePerMonth,
             Currency = package.Currency,
             CreatedAt = DateTime.UtcNow
@@ -340,6 +357,13 @@ public class ServicePackageService : IServicePackageService
         await _uow.BuddySubscriptions.AddAsync(subscription);
         await _uow.SaveChangesAsync();
 
+        if (usePayOs)
+        {
+            return await CreatePayOsSubscriptionOrderAsync(subscription, package, package.PricePerMonth,
+                isUpgrade: false, creditFromOld: 0);
+        }
+
+        // PayPal flow
         var description = $"Bonddy {package.Name} Package - 1 Month";
         var (orderId, approveUrl) = await CreatePayPalOrderAsync(
             subscription.Id, package.PricePerMonth, package.Currency, description);
@@ -361,6 +385,46 @@ public class ServicePackageService : IServicePackageService
             IsUpgrade = false,
             CreditFromOldPlan = 0,
             ProratedCharge = package.PricePerMonth
+        };
+    }
+
+    // ─── PayOS: Create subscription payment link ─────────────────────────
+
+    private async Task<SubscriptionPayOsOrderResponseDto> CreatePayOsSubscriptionOrderAsync(
+        BuddySubscription subscription, ServicePackage package,
+        decimal amount, bool isUpgrade, decimal creditFromOld)
+    {
+        // PayOS chỉ hỗ trợ VND — amount đã là VND từ package
+        var amountVnd = (int)Math.Round(amount, 0);
+
+        // PayOS minimum
+        if (amountVnd < 2000) amountVnd = 2000;
+
+        var orderCode = PayOsService.GenerateOrderCode();
+        var description = $"BONDDY {package.Name[..Math.Min(package.Name.Length, 15)]}";
+
+        var result = await _payOsService.CreatePaymentLinkAsync(
+            orderCode, amountVnd, description);
+
+        subscription.PayOsOrderCode = orderCode;
+        subscription.ExternalPaymentRef = result.PaymentLinkId;
+        subscription.UpdatedAt = DateTime.UtcNow;
+        _uow.BuddySubscriptions.Update(subscription);
+        await _uow.SaveChangesAsync();
+
+        return new SubscriptionPayOsOrderResponseDto
+        {
+            SubscriptionId = subscription.Id,
+            ServicePackageId = package.Id,
+            PackageName = package.Name,
+            OrderCode = orderCode,
+            CheckoutUrl = result.CheckoutUrl,
+            QrCode = result.QrCode,
+            Currency = "VND",
+            AmountVnd = amountVnd,
+            IsUpgrade = isUpgrade,
+            CreditFromOldPlan = creditFromOld,
+            ProratedCharge = amount
         };
     }
 

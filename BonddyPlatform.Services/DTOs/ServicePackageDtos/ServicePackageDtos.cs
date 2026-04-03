@@ -68,6 +68,12 @@ public class ServicePackageUpdateDto
 public class SubscribeRequestDto
 {
     public Guid ServicePackageId { get; set; }
+
+    /// <summary>
+    /// Phương thức thanh toán: "PayPal" hoặc "PayOS".
+    /// Mặc định: PayPal. Nếu chọn PayOS, amount sẽ được chuyển đổi sang VND.
+    /// </summary>
+    public string PreferredPaymentMethod { get; set; } = "PayPal";
 }
 
 /// <summary>Response DTO for a buddy's subscription (includes payment info).</summary>
@@ -129,5 +135,23 @@ public class DowngradeResponseDto
 public class SubscriptionCaptureRequestDto
 {
     public string OrderId { get; set; } = string.Empty;
+}
+
+/// <summary>Response when PayOS order is created for subscription payment.</summary>
+public class SubscriptionPayOsOrderResponseDto
+{
+    public Guid SubscriptionId { get; set; }
+    public Guid ServicePackageId { get; set; }
+    public string PackageName { get; set; } = string.Empty;
+    public long OrderCode { get; set; }
+    public string CheckoutUrl { get; set; } = string.Empty;
+    public string QrCode { get; set; } = string.Empty;
+    public string Currency { get; set; } = "VND";
+    public int AmountVnd { get; set; }
+
+    /// <summary>Nếu là upgrade — thông tin proration.</summary>
+    public bool IsUpgrade { get; set; }
+    public decimal CreditFromOldPlan { get; set; }
+    public decimal ProratedCharge { get; set; }
 }
 

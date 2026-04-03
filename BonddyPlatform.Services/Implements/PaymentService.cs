@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-
+using BonddyPlatform.Services.Implements;
 namespace BonddyPlatform.Services.Implements;
 
 public class PaymentService : IPaymentService
@@ -17,6 +17,7 @@ public class PaymentService : IPaymentService
     private readonly IUnitOfWork _uow;
     private readonly PayPalOptions _payPalOptions;
     private readonly ILogger<PaymentService> _logger;
+    private readonly IPayOsService _payOsService;
 
     // Escrow state machine
     private static readonly Dictionary<PaymentStatus, HashSet<PaymentStatus>> _allowedTransitions = new()
@@ -30,11 +31,13 @@ public class PaymentService : IPaymentService
     public PaymentService(
         IUnitOfWork uow,
         IOptions<PayPalOptions> payPalOptions,
-        ILogger<PaymentService> logger)
+        ILogger<PaymentService> logger,
+        IPayOsService payOsService)
     {
         _uow = uow;
         _payPalOptions = payPalOptions.Value;
         _logger = logger;
+        _payOsService = payOsService;
     }
 
     public async Task<PaymentResponseDto> CreateAsync(PaymentCreateRequestDto dto)
@@ -512,4 +515,212 @@ public class PaymentService : IPaymentService
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt
     };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  PayOS — Booking Payment
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    public async Task<PayOsCreateOrderResponseDto> CreatePayOsOrderAsync(Guid bookingId, Guid requesterUserId)
+    {
+        var booking = await _uow.Bookings.GetByIdAsync(bookingId)
+            ?? throw new KeyNotFoundException($"Booking {bookingId} not found.");
+
+        if (booking.TravelerUserId != requesterUserId)
+            throw new UnauthorizedAccessException("You are not allowed to pay this booking.");
+
+        if (booking.Status != BookingStatus.PendingPayment)
+            throw new InvalidOperationException($"Booking is not ready for payment. Current status: {booking.Status}");
+
+        // PayOS chỉ hỗ trợ VND
+        if (!string.Equals(booking.Currency, "VND", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("PayOS only supports VND currency. Please use PayPal for USD payments.");
+
+        // Get or create payment record
+        var payment = await _uow.Payments.GetByBookingIdAsync(bookingId);
+        if (payment == null)
+        {
+            payment = new Payment
+            {
+                BookingId = bookingId,
+                Amount = booking.TotalAmount,
+                Method = PaymentMethod.PayOS,
+                Status = PaymentStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _uow.Payments.AddAsync(payment);
+            await _uow.SaveChangesAsync();
+        }
+
+        if (payment.Status is PaymentStatus.Held or PaymentStatus.Released)
+            throw new InvalidOperationException("Booking is already paid.");
+
+        // Amount đã là VND, chuyển thành int (PayOS yêu cầu số nguyên)
+        var amountVnd = (int)Math.Round(booking.TotalAmount, 0);
+
+        // PayOS requires amount >= 2000 VND
+        if (amountVnd < 2000)
+            amountVnd = 2000;
+
+        // Generate unique order code
+        var orderCode = PayOsService.GenerateOrderCode();
+
+        var description = $"BONDDY BK{bookingId.ToString()[..8].ToUpper()}";
+
+        var result = await _payOsService.CreatePaymentLinkAsync(
+            orderCode, amountVnd, description);
+
+        // Save order code to payment
+        payment.PayOsOrderCode = orderCode;
+        payment.ExternalRef = result.PaymentLinkId;
+        payment.Method = PaymentMethod.PayOS;
+        payment.UpdatedAt = DateTime.UtcNow;
+        _uow.Payments.Update(payment);
+        await _uow.SaveChangesAsync();
+
+        return new PayOsCreateOrderResponseDto
+        {
+            PaymentId = payment.Id,
+            BookingId = booking.Id,
+            OrderCode = orderCode,
+            CheckoutUrl = result.CheckoutUrl,
+            QrCode = result.QrCode,
+            Currency = "VND",
+            AmountVnd = amountVnd
+        };
+    }
+
+    public async Task<PayOsWebhookResultDto> HandlePayOsWebhookAsync(string rawBody)
+    {
+        using var doc = JsonDocument.Parse(rawBody);
+        var root = doc.RootElement;
+
+        var code = root.TryGetProperty("code", out var codeEl) ? codeEl.GetString() : null;
+        var signature = root.TryGetProperty("signature", out var sigEl) ? sigEl.GetString() : null;
+
+        if (string.IsNullOrWhiteSpace(signature))
+            return new PayOsWebhookResultDto { Processed = false, Message = "Missing signature." };
+
+        if (!root.TryGetProperty("data", out var dataEl))
+            return new PayOsWebhookResultDto { Processed = false, Message = "Missing data." };
+
+        // Convert data element to dictionary for signature verification
+        var dataDict = new Dictionary<string, object>();
+        foreach (var prop in dataEl.EnumerateObject())
+        {
+            dataDict[prop.Name] = prop.Value;
+        }
+
+        // Verify signature
+        if (!_payOsService.VerifyWebhookSignature(dataDict, signature))
+            return new PayOsWebhookResultDto { Processed = false, Message = "Invalid PayOS webhook signature." };
+
+        // Extract order code
+        if (!dataEl.TryGetProperty("orderCode", out var orderCodeEl))
+            return new PayOsWebhookResultDto { Processed = false, Message = "Missing orderCode in data." };
+
+        var orderCode = orderCodeEl.GetInt64();
+        var dataCode = dataEl.TryGetProperty("code", out var dataCodeEl) ? dataCodeEl.GetString() : null;
+
+        _logger.LogInformation("PayOS webhook received: orderCode={OrderCode}, code={Code}, dataCode={DataCode}",
+            orderCode, code, dataCode);
+
+        // ─── Try to find Booking Payment ──────────────────────────────────────
+        var payment = await _uow.Payments
+            .GetQueryable()
+            .FirstOrDefaultAsync(p => p.PayOsOrderCode == orderCode);
+
+        if (payment != null)
+        {
+            return await HandleBookingPayOsWebhookAsync(payment, code, dataCode);
+        }
+
+        // ─── Try to find Subscription ─────────────────────────────────────────
+        var subscription = await _uow.BuddySubscriptions
+            .GetQueryable()
+            .Include(s => s.ServicePackage)
+            .FirstOrDefaultAsync(s => s.PayOsOrderCode == orderCode);
+
+        if (subscription != null)
+        {
+            return await HandleSubscriptionPayOsWebhookAsync(subscription, code, dataCode);
+        }
+
+        return new PayOsWebhookResultDto { Processed = false, Message = $"No matching record for orderCode {orderCode}." };
+    }
+
+    private async Task<PayOsWebhookResultDto> HandleBookingPayOsWebhookAsync(
+        Payment payment, string? code, string? dataCode)
+    {
+        // code "00" = success
+        if (code == "00" && dataCode == "00")
+        {
+            if (payment.Status == PaymentStatus.Pending)
+            {
+                payment.Status = PaymentStatus.Held;
+                payment.HeldAt = DateTime.UtcNow;
+                payment.UpdatedAt = DateTime.UtcNow;
+                _uow.Payments.Update(payment);
+
+                var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId);
+                if (booking is not null && booking.Status == BookingStatus.PendingPayment)
+                {
+                    booking.Status = BookingStatus.Confirmed;
+                    booking.UpdatedAt = DateTime.UtcNow;
+                    _uow.Bookings.Update(booking);
+                }
+
+                await _uow.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "PayOS booking payment confirmed: PaymentId={PaymentId}, BookingId={BookingId}",
+                    payment.Id, payment.BookingId);
+
+                return new PayOsWebhookResultDto { Processed = true, Message = "Booking payment marked as held." };
+            }
+        }
+
+        return new PayOsWebhookResultDto { Processed = false, Message = $"Booking payment not updated. code={code}, dataCode={dataCode}, status={payment.Status}" };
+    }
+
+    private async Task<PayOsWebhookResultDto> HandleSubscriptionPayOsWebhookAsync(
+        BuddySubscription subscription, string? code, string? dataCode)
+    {
+        if (code == "00" && dataCode == "00")
+        {
+            if (subscription.Status == SubscriptionStatus.PendingPayment)
+            {
+                // Cancel old active subscription if this is an upgrade
+                var existingActive = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(subscription.BuddyId);
+                if (existingActive is not null && existingActive.Id != subscription.Id)
+                {
+                    existingActive.Status = SubscriptionStatus.Cancelled;
+                    existingActive.UpdatedAt = DateTime.UtcNow;
+                    _uow.BuddySubscriptions.Update(existingActive);
+                }
+
+                subscription.Status = SubscriptionStatus.Active;
+                subscription.PaidAt = DateTime.UtcNow;
+                subscription.PaymentMethod = PaymentMethod.PayOS;
+                subscription.UpdatedAt = DateTime.UtcNow;
+
+                // For new subscriptions, set proper start/end dates
+                if (existingActive is null)
+                {
+                    subscription.StartDate = DateTime.UtcNow;
+                    subscription.EndDate = DateTime.UtcNow.AddMonths(1);
+                }
+
+                _uow.BuddySubscriptions.Update(subscription);
+                await _uow.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "PayOS subscription activated: SubId={SubId}, BuddyId={BuddyId}, Package={Package}",
+                    subscription.Id, subscription.BuddyId, subscription.ServicePackage?.Name);
+
+                return new PayOsWebhookResultDto { Processed = true, Message = "Subscription activated via PayOS." };
+            }
+        }
+
+        return new PayOsWebhookResultDto { Processed = false, Message = $"Subscription not updated. code={code}, dataCode={dataCode}" };
+    }
 }

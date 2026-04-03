@@ -30,6 +30,15 @@ builder.Services.Configure<PayPalOptions>(options =>
     options.ReturnUrl = builder.Configuration["PAYPAL_RETURN_URL"] ?? options.ReturnUrl;
     options.CancelUrl = builder.Configuration["PAYPAL_CANCEL_URL"] ?? options.CancelUrl;
 });
+builder.Services.Configure<PayOsOptions>(options =>
+{
+    builder.Configuration.GetSection(PayOsOptions.SectionName).Bind(options);
+    options.ClientId = builder.Configuration["PAYOS_CLIENT_ID"] ?? options.ClientId;
+    options.ApiKey = builder.Configuration["PAYOS_API_KEY"] ?? options.ApiKey;
+    options.ChecksumKey = builder.Configuration["PAYOS_CHECKSUM_KEY"] ?? options.ChecksumKey;
+    options.ReturnUrl = builder.Configuration["PAYOS_RETURN_URL"] ?? options.ReturnUrl;
+    options.CancelUrl = builder.Configuration["PAYOS_CANCEL_URL"] ?? options.CancelUrl;
+});
 builder.Services.AddHttpClient();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
@@ -188,6 +197,7 @@ builder.Services.AddScoped<ITripRequestService, TripRequestService>();
 builder.Services.AddScoped<IBuddyService, BuddyService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPayOsService, PayOsService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<IServicePackageService, ServicePackageService>();

@@ -19,6 +19,9 @@ public class Payment
     [MaxLength(200)]
     public string? ExternalRef { get; set; }
 
+    /// <summary>Mã đơn hàng PayOS (int64) — dùng để map webhook callback.</summary>
+    public long? PayOsOrderCode { get; set; }
+
     /// <summary>Thời điểm tiền được giữ trong escrow</summary>
     public DateTime? HeldAt { get; set; }
 
@@ -40,7 +43,9 @@ public enum PaymentMethod
     Cash = 0,
     BankTransfer = 1,
     Card = 2,
-    Wallet = 3
+    Wallet = 3,
+    /// <summary>Thanh toán qua PayOS (QR VietQR)</summary>
+    PayOS = 4
 }
 
 public enum PaymentStatus

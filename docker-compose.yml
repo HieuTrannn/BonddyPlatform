@@ -44,6 +44,11 @@ services:
       PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:?Set PAYPAL_WEBHOOK_ID in .env}
       PAYPAL_RETURN_URL: ${PAYPAL_RETURN_URL:?Set PAYPAL_RETURN_URL in .env}
       PAYPAL_CANCEL_URL: ${PAYPAL_CANCEL_URL:?Set PAYPAL_CANCEL_URL in .env}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:?Set PAYOS_CLIENT_ID in .env}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:?Set PAYOS_API_KEY in .env}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:?Set PAYOS_CHECKSUM_KEY in .env}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-https://bonddy.vn/payment/payos/success}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-https://bonddy.vn/payment/payos/cancel}
     ports:
       - "8080:8080" # Nginx sẽ proxy 80/443 -> 8080
     # Mount Firebase credentials (bỏ comment 1 dòng dưới khi đã có file JSON trên VPS)

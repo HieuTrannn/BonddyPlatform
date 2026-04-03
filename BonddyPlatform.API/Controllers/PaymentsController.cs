@@ -146,4 +146,45 @@ public class PaymentsController : ApiControllerBase
         var result = await _paymentService.HandlePayPalWebhookAsync(rawBody, headers);
         return Ok(ApiResponse<PayPalWebhookResultDto>.SuccessResponse(result, result.Message));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  PayOS — QR VietQR Payment
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>Create a PayOS payment link (QR code) for a booking. Booking currency must be VND.</summary>
+    [HttpPost("payos/bookings/{bookingId:guid}/create-order")]
+    [HttpPost("/api/Bookings/{bookingId:guid}/payment/payos/create-order")]
+    [SwaggerOperation(Summary = "Create PayOS order (QR code) for booking")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PayOsCreateOrderResponseDto>))]
+    public async Task<IActionResult> CreatePayOsOrder(Guid bookingId)
+    {
+        try
+        {
+            var userId = GetCurrentUserIdOrThrow();
+            var result = await _paymentService.CreatePayOsOrderAsync(bookingId, userId);
+            return Ok(ApiResponse<PayOsCreateOrderResponseDto>.SuccessResponse(result, "PayOS payment link created. Redirect to checkoutUrl or show QR code."));
+        }
+        catch (KeyNotFoundException ex) { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
+    }
+
+    /// <summary>PayOS webhook endpoint (must be publicly accessible). Auto-updates booking/payment/subscription status.</summary>
+    [AllowAnonymous]
+    [HttpPost("payos/webhook")]
+    [SwaggerOperation(Summary = "PayOS webhook — auto-update payment status")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<PayOsWebhookResultDto>))]
+    public async Task<IActionResult> PayOsWebhook()
+    {
+        Request.EnableBuffering();
+        string rawBody;
+        using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+        {
+            rawBody = await reader.ReadToEndAsync();
+            Request.Body.Position = 0;
+        }
+
+        var result = await _paymentService.HandlePayOsWebhookAsync(rawBody);
+        return Ok(ApiResponse<PayOsWebhookResultDto>.SuccessResponse(result, result.Message));
+    }
 }

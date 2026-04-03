@@ -55,3 +55,22 @@ public class PayPalWebhookResultDto
     public bool Processed { get; set; }
     public string Message { get; set; } = string.Empty;
 }
+
+// ─── PayOS DTOs ───────────────────────────────────────────────────────────
+
+public class PayOsCreateOrderResponseDto
+{
+    public Guid PaymentId { get; set; }
+    public Guid BookingId { get; set; }
+    public long OrderCode { get; set; }
+    public string CheckoutUrl { get; set; } = string.Empty;
+    public string QrCode { get; set; } = string.Empty;
+    public string Currency { get; set; } = "VND";
+    public int AmountVnd { get; set; }
+}
+
+public class PayOsWebhookResultDto
+{
+    public bool Processed { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
