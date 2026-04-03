@@ -145,7 +145,7 @@ public class ServicePackagesController : ApiControllerBase
     /// <summary>Capture PayPal payment → kích hoạt subscription.</summary>
     [Authorize(Roles = "Buddy")]
     [HttpPost("subscriptions/{subscriptionId:guid}/capture")]
-    [SwaggerOperation(Summary = "Capture PayPal payment — kích hoạt subscription")]
+    [SwaggerOperation(Summary = "Capture PayPal payment — kích hoạt subscription", Description = "Capture PayPal payment → kích hoạt subscription. preferredPaymentMethod = PayOS")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddySubscriptionResponseDto>))]
     [SwaggerResponse(400, "Bad Request", typeof(ApiResponse<object>))]
     public async Task<IActionResult> CapturePayment(Guid subscriptionId, [FromBody] SubscriptionCaptureRequestDto dto)
