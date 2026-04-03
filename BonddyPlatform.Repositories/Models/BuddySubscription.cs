@@ -39,6 +39,9 @@ public class BuddySubscription
     /// <summary>External payment reference (e.g. PayPal order ID)</summary>
     public string? ExternalPaymentRef { get; set; }
 
+    /// <summary>Mã đơn hàng PayOS (int64) — dùng để map webhook callback.</summary>
+    public long? PayOsOrderCode { get; set; }
+
     /// <summary>When payment was confirmed</summary>
     public DateTime? PaidAt { get; set; }
 

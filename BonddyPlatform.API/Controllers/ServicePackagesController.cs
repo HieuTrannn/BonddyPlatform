@@ -94,14 +94,15 @@ public class ServicePackagesController : ApiControllerBase
 
     /// <summary>
     /// Buddy đăng ký / nâng cấp / hạ cấp gói dịch vụ.
-    /// - Chưa có gói → tạo PayPal order (full price)
-    /// - Upgrade → tạo PayPal order (chênh lệch proration), kích hoạt ngay sau capture
+    /// - Chưa có gói → tạo PayPal/PayOS order (full price)
+    /// - Upgrade → tạo PayPal/PayOS order (chênh lệch proration), kích hoạt ngay sau capture/webhook
     /// - Downgrade → schedule đổi gói khi hết kỳ hiện tại (không cần thanh toán)
+    /// Body: { servicePackageId, preferredPaymentMethod: "PayPal" | "PayOS" }
     /// </summary>
     [Authorize(Roles = "Buddy")]
     [HttpPost("subscribe")]
     [SwaggerOperation(Summary = "Buddy đăng ký / upgrade / downgrade gói dịch vụ")]
-    [SwaggerResponse(201, "Created — PayPal order (upgrade/new)")]
+    [SwaggerResponse(201, "Created — PayPal/PayOS order (upgrade/new)")]
     [SwaggerResponse(200, "OK — Downgrade scheduled")]
     public async Task<IActionResult> Subscribe([FromBody] SubscribeRequestDto dto)
     {
@@ -116,7 +117,16 @@ public class ServicePackagesController : ApiControllerBase
                 return Ok(ApiResponse<DowngradeResponseDto>.SuccessResponse(downgrade, downgrade.Message));
             }
 
-            // New / Upgrade → trả 201 Created (cần thanh toán)
+            // PayOS → trả 201 Created (cần quét QR)
+            if (result is SubscriptionPayOsOrderResponseDto payOsResult)
+            {
+                return CreatedAtAction(nameof(GetMySubscription), new { },
+                    ApiResponse<SubscriptionPayOsOrderResponseDto>.SuccessResponse(
+                        payOsResult,
+                        "PayOS order created. Redirect buddy to checkoutUrl or show QR code to complete payment."));
+            }
+
+            // PayPal → trả 201 Created (cần redirect approve)
             return CreatedAtAction(nameof(GetMySubscription), new { },
                 ApiResponse<SubscriptionPayPalOrderResponseDto>.SuccessResponse(
                     (SubscriptionPayPalOrderResponseDto)result,

@@ -24,4 +24,12 @@ public interface IPaymentService
 
     /// <summary>Handle PayPal webhook (signature verification + state updates).</summary>
     Task<PayPalWebhookResultDto> HandlePayPalWebhookAsync(string rawBody, IDictionary<string, string> headers);
+
+    // ─── PayOS ───────────────────────────────────────────────────────────────
+
+    /// <summary>Create PayOS payment link for a booking (QR code payment).</summary>
+    Task<PayOsCreateOrderResponseDto> CreatePayOsOrderAsync(Guid bookingId, Guid requesterUserId);
+
+    /// <summary>Handle PayOS webhook (signature verification + auto-update booking/payment).</summary>
+    Task<PayOsWebhookResultDto> HandlePayOsWebhookAsync(string rawBody);
 }

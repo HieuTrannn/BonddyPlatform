@@ -99,3 +99,9 @@ public class ConfirmBookingAndPayResponseDto
     public BookingResponseDto Booking { get; set; } = new();
     public PayPalCreateOrderResponseDto PaymentOrder { get; set; } = new();
 }
+
+public class ConfirmBookingAndPayOsResponseDto
+{
+    public BookingResponseDto Booking { get; set; } = new();
+    public PayOsCreateOrderResponseDto PaymentOrder { get; set; } = new();
+}

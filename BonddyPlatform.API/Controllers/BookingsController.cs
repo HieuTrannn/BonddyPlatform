@@ -124,6 +124,38 @@ public class BookingsController : ApiControllerBase
         catch (InvalidOperationException ex) { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
     }
 
+    /// <summary>
+    /// Traveler confirms booking and gets PayOS checkout URL + QR code in one call.
+    /// Booking currency must be VND. FE should redirect to checkoutUrl or display QR code.
+    /// </summary>
+    [HttpPost("{id:guid}/confirm-and-create-payos-order")]
+    [Authorize(Roles = "User")]
+    [SwaggerOperation(Summary = "Traveler xác nhận booking và tạo PayOS order (QR code)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<ConfirmBookingAndPayOsResponseDto>))]
+    public async Task<IActionResult> ConfirmAndCreatePayOsOrder(Guid id)
+    {
+        try
+        {
+            var travelerUserId = GetCurrentUserIdOrThrow();
+            var booking = await _bookingService.EnsurePendingPaymentAsync(travelerUserId, id);
+            var paymentOrder = await _paymentService.CreatePayOsOrderAsync(id, travelerUserId);
+
+            var result = new ConfirmBookingAndPayOsResponseDto
+            {
+                Booking = booking,
+                PaymentOrder = paymentOrder
+            };
+
+            return Ok(ApiResponse<ConfirmBookingAndPayOsResponseDto>.SuccessResponse(
+                result,
+                "Booking confirmed and PayOS order created. Redirect to checkoutUrl or show QR code."));
+        }
+        catch (KeyNotFoundException ex)      { return NotFound(ApiResponse.ErrorResponse(ex.Message)); }
+        catch (UnauthorizedAccessException)  { return Forbid(); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiResponse.ErrorResponse(ex.Message)); }
+    }
+
+
     // ─── Get detail ───────────────────────────────────────────────────────────
 
     /// <summary>Lấy chi tiết một booking: GET /api/Bookings/{id}</summary>
