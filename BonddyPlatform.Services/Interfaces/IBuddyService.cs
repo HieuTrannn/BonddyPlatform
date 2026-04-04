@@ -23,4 +23,6 @@ public interface IBuddyService
     Task<BuddyResponseDto?> UploadAvatarAsync(Guid userId, IFormFile avatar);
 
     Task<bool> DeleteAsync(Guid id);
+    /// <summary>Toggle IsActive: Active ↔ Inactive. Returns updated DTO.</summary>
+    Task<BuddyResponseDto?> ToggleActiveAsync(Guid id);
 }

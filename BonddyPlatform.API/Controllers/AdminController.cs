@@ -70,13 +70,16 @@ public class AdminController : ApiControllerBase
         return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, "User updated successfully"));
     }
 
-    [HttpDelete("users/{id:guid}")]
-    [SwaggerOperation(Summary = "Admin: xóa user")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [HttpPatch("users/{id:guid}/toggle-status")]
+    [SwaggerOperation(Summary = "Admin: toggle trạng thái user (Active ↔ Inactive)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]
+    [SwaggerResponse(404, "User not found")]
+    public async Task<IActionResult> ToggleUserStatus(Guid id)
     {
-        await _userService.DeleteAsync(id);
-        return Ok(ApiResponse<object>.SuccessResponse("User deleted successfully"));
+        var result = await _userService.ToggleActiveAsync(id);
+        if (result is null) return NotFound("User not found.");
+        var status = result.IsActive ? "Active" : "Inactive";
+        return Ok(ApiResponse<UserResponseDto>.SuccessResponse(result, $"User status changed to {status}."));
     }
 
     // ─── TRIPS ───────────────────────────────────────────────────────────────
@@ -179,14 +182,16 @@ public class AdminController : ApiControllerBase
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy updated successfully"));
     }
 
-    [HttpDelete("buddies/{id:guid}")]
-    [SwaggerOperation(Summary = "Admin: xóa buddy")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
-    public async Task<IActionResult> DeleteBuddy(Guid id)
+    [HttpPatch("buddies/{id:guid}/toggle-status")]
+    [SwaggerOperation(Summary = "Admin: toggle trạng thái buddy (Active ↔ Inactive)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
+    [SwaggerResponse(404, "Buddy not found")]
+    public async Task<IActionResult> ToggleBuddyStatus(Guid id)
     {
-        var ok = await _buddyService.DeleteAsync(id);
-        if (!ok) return NotFound("Buddy not found.");
-        return Ok(ApiResponse<object>.SuccessResponse("Buddy deleted successfully"));
+        var result = await _buddyService.ToggleActiveAsync(id);
+        if (result is null) return NotFound("Buddy not found.");
+        var status = result.IsActive ? "Active" : "Inactive";
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, $"Buddy status changed to {status}."));
     }
 
     // ─── REVIEWS ─────────────────────────────────────────────────────────────

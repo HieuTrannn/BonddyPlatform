@@ -211,6 +211,19 @@ public class BuddyService : IBuddyService
         return true;
     }
 
+    public async Task<BuddyResponseDto?> ToggleActiveAsync(Guid id)
+    {
+        var buddy = await _uow.Buddies.GetByIdWithUserAsync(id);
+        if (buddy is null) return null;
+
+        buddy.IsActive = !buddy.IsActive;
+        buddy.UpdatedAt = DateTime.UtcNow;
+        _uow.Buddies.Update(buddy);
+        await _uow.SaveChangesAsync();
+
+        return ToDto(buddy);
+    }
+
     private static BuddyResponseDto ToDto(Buddy b) => new()
     {
         Id = b.Id,

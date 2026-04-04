@@ -14,6 +14,7 @@ public class UserResponseDto
     public string? AboutMe { get; set; }
     public string? ProfilePicture { get; set; }
     public bool IsEmailVerified { get; set; }
+    public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -934,6 +934,9 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Property<int>("Gender")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean");
 
@@ -973,6 +976,7 @@ namespace BonddyPlatform.Repositories.Migrations
                             Email = "admin@bonddy.com",
                             FullName = "Bonddy Admin",
                             Gender = 2,
+                            IsActive = true,
                             IsEmailVerified = true,
                             Password = "$2a$11$4utbNwmPKUJywWue101YXe7l0StEL09.KPQdV04hADeCAswcd7QFq",
                             PhoneNumber = "",
