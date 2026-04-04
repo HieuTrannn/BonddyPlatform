@@ -29,12 +29,12 @@ public class Incident
 
 public enum IncidentType
 {
-    NoShow = 0,
-    LateArrival = 1,
-    QualityIssue = 2,
-    SafetyConcern = 3,
-    PaymentDispute = 4,
-    Other = 5
+    NoShow = 0, // Không đến
+    LateArrival = 1, // Đến muộn
+    QualityIssue = 2, // Chất lượng dịch vụ
+    SafetyConcern = 3, // An toàn
+    PaymentDispute = 4, // Tranh chấp thanh toán
+    Other = 5 // Khác
 }
 
 public enum IncidentStatus

@@ -8,6 +8,8 @@ namespace BonddyPlatform.API.BackgroundJobs;
 /// Background job chạy định kỳ mỗi 5 phút để tự động cập nhật status:
 /// - Trip (Open/Closed) → Expired khi StartDate+StartTime đã qua.
 /// - Booking (PendingCustomerConfirm/PendingPayment) → Expired khi BookedDate+BookedStartTime đã qua.
+/// - Booking (Confirmed) → InProgress khi BookedDate+BookedStartTime đã tới.
+/// - Booking (InProgress) → Completed khi BookedDate+BookedStartTime+BookedDurationHours đã qua.
 /// </summary>
 public class StatusExpiryJob : BackgroundService
 {
@@ -57,8 +59,6 @@ public class StatusExpiryJob : BackgroundService
         var currentTime = TimeOnly.FromDateTime(now);
 
         // ── 1. Expire Trips ────────────────────────────────────────────────────
-        // Chỉ xét Trip đang Open hoặc Closed (Draft/Expired/Deleted bỏ qua).
-        // Điều kiện: StartDate < today  HOẶC  (StartDate == today AND StartTime <= currentTime)
         var tripsToExpire = await db.Trips
             .Where(t => (t.Status == TripStatus.Open || t.Status == TripStatus.Closed)
                      && (t.StartDate < today
@@ -71,9 +71,7 @@ public class StatusExpiryJob : BackgroundService
             trip.UpdatedAt = now;
         }
 
-        // ── 2. Expire Bookings ─────────────────────────────────────────────────
-        // Chỉ xét Booking chưa được xử lý (chưa confirm / chưa thanh toán).
-        // Điều kiện: BookedDate+BookedStartTime đã qua.
+        // ── 2. Expire Bookings (chưa confirm / chưa thanh toán) ───────────────
         var bookingsToExpire = await db.Bookings
             .Where(b => (b.Status == BookingStatus.PendingCustomerConfirm
                       || b.Status == BookingStatus.PendingPayment)
@@ -87,12 +85,52 @@ public class StatusExpiryJob : BackgroundService
             booking.UpdatedAt = now;
         }
 
-        if (tripsToExpire.Count > 0 || bookingsToExpire.Count > 0)
+        // ── 3. Confirmed → InProgress khi đến giờ đi ──────────────────────────
+        var bookingsToStart = await db.Bookings
+            .Where(b => b.Status == BookingStatus.Confirmed
+                     && (b.BookedDate < today
+                         || (b.BookedDate == today && b.BookedStartTime <= currentTime)))
+            .ToListAsync(ct);
+
+        foreach (var booking in bookingsToStart)
+        {
+            booking.Status    = BookingStatus.InProgress;
+            booking.UpdatedAt = now;
+        }
+
+        // ── 4. InProgress → Completed khi hết thời gian tour ─────────────────
+        // Thời gian kết thúc = BookedDate+BookedStartTime + BookedDurationHours
+        var bookingsInProgress = await db.Bookings
+            .Where(b => b.Status == BookingStatus.InProgress)
+            .ToListAsync(ct);
+
+        var bookingsToComplete = bookingsInProgress
+            .Where(b =>
+            {
+                // Tính DateTime kết thúc tour (UTC naive — cộng giờ đơn giản)
+                var startDt = b.BookedDate.ToDateTime(b.BookedStartTime);
+                var endDt   = startDt.AddHours(b.BookedDurationHours);
+                return now >= endDt;
+            })
+            .ToList();
+
+        foreach (var booking in bookingsToComplete)
+        {
+            booking.Status    = BookingStatus.Completed;
+            booking.UpdatedAt = now;
+        }
+
+        var totalChanged = tripsToExpire.Count + bookingsToExpire.Count
+                         + bookingsToStart.Count + bookingsToComplete.Count;
+
+        if (totalChanged > 0)
         {
             await db.SaveChangesAsync(ct);
             _logger.LogInformation(
-                "StatusExpiryJob: {TripCount} trip(s) and {BookingCount} booking(s) marked Expired.",
-                tripsToExpire.Count, bookingsToExpire.Count);
+                "StatusExpiryJob: {Expired} trip(s) expired | {BookingExpired} booking(s) expired | " +
+                "{Started} booking(s) → InProgress | {Completed} booking(s) → Completed.",
+                tripsToExpire.Count, bookingsToExpire.Count,
+                bookingsToStart.Count, bookingsToComplete.Count);
         }
     }
 }
