@@ -34,4 +34,10 @@ public interface IServicePackageService
     /// Hủy gói — giữ active đến hết kỳ thanh toán, sau đó không gia hạn.
     /// </summary>
     Task<BuddySubscriptionResponseDto?> CancelSubscriptionAsync(Guid userId);
+
+    /// <summary>
+    /// Verify PayOS subscription payment status và activate nếu đã thanh toán.
+    /// Dùng khi webhook chưa kịp gọi hoặc client muốn poll sau khi redirect về.
+    /// </summary>
+    Task<BuddySubscriptionResponseDto> VerifyPayOsSubscriptionAsync(Guid userId, Guid subscriptionId);
 }

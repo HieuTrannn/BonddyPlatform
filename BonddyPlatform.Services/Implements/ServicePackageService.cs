@@ -552,9 +552,78 @@ public class ServicePackageService : IServicePackageService
         return MapSubscriptionToDto(sub, sub.ServicePackage);
     }
 
+    // ─── Verify PayOS subscription payment (client-side poll after redirect) ──
+
+    public async Task<BuddySubscriptionResponseDto> VerifyPayOsSubscriptionAsync(Guid userId, Guid subscriptionId)
+    {
+        var buddy = await _uow.Buddies.GetByUserIdAsync(userId)
+            ?? throw new KeyNotFoundException("Buddy profile not found.");
+
+        var subscription = await _uow.BuddySubscriptions.GetByIdAsync(subscriptionId)
+            ?? throw new KeyNotFoundException("Subscription not found.");
+
+        if (subscription.BuddyId != buddy.Id)
+            throw new UnauthorizedAccessException("This subscription does not belong to you.");
+
+        var package = await _uow.ServicePackages.GetByIdAsync(subscription.ServicePackageId)
+            ?? throw new KeyNotFoundException("Service package not found.");
+
+        // Nếu đã active rồi → trả về luôn
+        if (subscription.Status == SubscriptionStatus.Active)
+            return MapSubscriptionToDto(subscription, package);
+
+        if (subscription.Status != SubscriptionStatus.PendingPayment)
+            throw new InvalidOperationException($"Subscription is not pending payment. Status: {subscription.Status}");
+
+        if (!subscription.PayOsOrderCode.HasValue)
+            throw new InvalidOperationException("Subscription does not have a PayOS order code.");
+
+        // Gọi PayOS API để kiểm tra trạng thái thanh toán
+        var paymentInfo = await _payOsService.GetPaymentInfoAsync(subscription.PayOsOrderCode.Value)
+            ?? throw new InvalidOperationException("Cannot retrieve payment info from PayOS.");
+
+        _logger.LogInformation(
+            "PayOS payment info for orderCode={OrderCode}: status={Status}, amountPaid={AmountPaid}",
+            subscription.PayOsOrderCode.Value, paymentInfo.Status, paymentInfo.AmountPaid);
+
+        if (!string.Equals(paymentInfo.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                $"PayOS payment has not been completed yet. Current status: {paymentInfo.Status}");
+
+        // Thanh toán thành công → activate subscription
+        var existingActive = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(buddy.Id);
+        if (existingActive is not null && existingActive.Id != subscription.Id)
+        {
+            existingActive.Status = SubscriptionStatus.Cancelled;
+            existingActive.UpdatedAt = DateTime.UtcNow;
+            _uow.BuddySubscriptions.Update(existingActive);
+        }
+
+        subscription.Status = SubscriptionStatus.Active;
+        subscription.PaidAt = DateTime.UtcNow;
+        subscription.PaymentMethod = PaymentMethod.PayOS;
+        subscription.UpdatedAt = DateTime.UtcNow;
+
+        if (existingActive is null)
+        {
+            subscription.StartDate = DateTime.UtcNow;
+            subscription.EndDate = DateTime.UtcNow.AddMonths(1);
+        }
+
+        _uow.BuddySubscriptions.Update(subscription);
+        await _uow.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Subscription {SubId} activated via PayOS verify for Buddy {BuddyId} — Package: {Package}",
+            subscription.Id, buddy.Id, package.Name);
+
+        return MapSubscriptionToDto(subscription, package);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     //  PayPal Helpers
     // ═══════════════════════════════════════════════════════════════════════════
+
 
     private void EnsurePayPalConfigured()
     {

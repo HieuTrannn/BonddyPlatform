@@ -257,12 +257,22 @@ namespace BonddyPlatform.Repositories.Persistences
                 entity.Property(x => x.Note).HasMaxLength(500);
                 entity.Property(x => x.CreatedAt).IsRequired();
 
+                // BookingId is now optional — null when payment is for a subscription
                 entity.HasOne(x => x.Booking)
                     .WithOne(b => b.Payment)
                     .HasForeignKey<Payment>(x => x.BookingId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(x => x.BookingId).IsUnique();
+                // BuddySubscriptionId is optional — set when payment is for a subscription
+                entity.HasOne(x => x.BuddySubscription)
+                    .WithMany()
+                    .HasForeignKey(x => x.BuddySubscriptionId)
+                    .IsRequired(false)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(x => x.BookingId).IsUnique(false);
+                entity.HasIndex(x => x.BuddySubscriptionId);
                 entity.HasIndex(x => x.Status);
             });
 

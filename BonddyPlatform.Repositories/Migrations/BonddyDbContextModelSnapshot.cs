@@ -565,7 +565,10 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("BookingId")
+                    b.Property<Guid?>("BookingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BuddySubscriptionId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -602,8 +605,9 @@ namespace BonddyPlatform.Repositories.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId")
-                        .IsUnique();
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("BuddySubscriptionId");
 
                     b.HasIndex("Status");
 
@@ -1229,10 +1233,16 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.HasOne("BonddyPlatform.Repositories.Models.Booking", "Booking")
                         .WithOne("Payment")
                         .HasForeignKey("BonddyPlatform.Repositories.Models.Payment", "BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("BonddyPlatform.Repositories.Models.BuddySubscription", "BuddySubscription")
+                        .WithMany()
+                        .HasForeignKey("BuddySubscriptionId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Booking");
+
+                    b.Navigation("BuddySubscription");
                 });
 
             modelBuilder.Entity("BonddyPlatform.Repositories.Models.RefreshToken", b =>
