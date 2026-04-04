@@ -197,6 +197,9 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long?>("PayOsOrderCode")
+                        .HasColumnType("bigint");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("integer");
 
@@ -581,6 +584,9 @@ namespace BonddyPlatform.Repositories.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<long?>("PayOsOrderCode")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("RefundedAt")
                         .HasColumnType("timestamp with time zone");
