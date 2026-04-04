@@ -1,5 +1,6 @@
 using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Services.DTOs.BookingDtos;
+using BonddyPlatform.Services.DTOs.Common;
 
 namespace BonddyPlatform.Services.Interfaces;
 
@@ -42,4 +43,7 @@ public interface IBookingService
 
     /// <summary>CS/Admin cập nhật trạng thái booking (state machine).</summary>
     Task<BookingResponseDto?> UpdateStatusAsync(Guid id, BookingStatus newStatus);
+
+    /// <summary>Admin lấy tất cả bookings với pagination và filter.</summary>
+    Task<PagedResultDto<BookingResponseDto>> GetAllPagedAsync(BookingSearchRequestDto request);
 }
