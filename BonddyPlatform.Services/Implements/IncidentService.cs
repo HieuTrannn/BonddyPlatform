@@ -30,8 +30,15 @@ public class IncidentService : IIncidentService
         var isTraveler = booking.TravelerUserId == reportedByUserId;
         var buddy = await _uow.Buddies.GetByIdAsync(booking.BuddyId);
         var isBuddy = buddy != null && buddy.UserId == reportedByUserId;
+
         if (!isOps && !isTraveler && !isBuddy)
             throw new UnauthorizedAccessException("You are not allowed to create an incident for this booking.");
+
+        // Chỉ Admin/CS được report incident bất kỳ lúc nào.
+        // Traveler/Buddy chỉ được report khi booking đã Completed.
+        if (!isOps && booking.Status != BookingStatus.Completed)
+            throw new InvalidOperationException(
+                "Chỉ có thể báo cáo sự cố sau khi tour đã hoàn thành (Completed).");
 
         var incident = new Incident
         {
