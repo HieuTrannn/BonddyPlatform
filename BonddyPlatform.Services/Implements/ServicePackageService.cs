@@ -522,10 +522,52 @@ public class ServicePackageService : IServicePackageService
         var buddy = await _uow.Buddies.GetByUserIdAsync(userId);
         if (buddy is null) return null;
 
+        // Kiểm tra active subscription trước
         var sub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(buddy.Id);
-        if (sub is null) return null;
+        if (sub is not null)
+            return MapSubscriptionToDto(sub, sub.ServicePackage);
 
-        return MapSubscriptionToDto(sub, sub.ServicePackage);
+        // Không có active → tìm pending PayOS subscription và tự verify
+        var pendingSub = await _uow.BuddySubscriptions.GetPendingByBuddyIdAsync(buddy.Id);
+        if (pendingSub is null || !pendingSub.PayOsOrderCode.HasValue)
+            return null;
+
+        // Gọi PayOS API kiểm tra trạng thái
+        try
+        {
+            var paymentInfo = await _payOsService.GetPaymentInfoAsync(pendingSub.PayOsOrderCode.Value);
+            if (paymentInfo is null || !string.Equals(paymentInfo.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogDebug(
+                    "PayOS pending subscription {SubId}: status={Status} — not yet paid",
+                    pendingSub.Id, paymentInfo?.Status ?? "N/A");
+                return null;
+            }
+
+            // Đã PAID → activate
+            pendingSub.Status = SubscriptionStatus.Active;
+            pendingSub.PaidAt = DateTime.UtcNow;
+            pendingSub.PaymentMethod = PaymentMethod.PayOS;
+            pendingSub.StartDate = DateTime.UtcNow;
+            pendingSub.EndDate = DateTime.UtcNow.AddMonths(1);
+            pendingSub.UpdatedAt = DateTime.UtcNow;
+            _uow.BuddySubscriptions.Update(pendingSub);
+            await _uow.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Auto-activated PayOS subscription {SubId} for Buddy {BuddyId} via GetMySubscription",
+                pendingSub.Id, buddy.Id);
+
+            return MapSubscriptionToDto(pendingSub, pendingSub.ServicePackage);
+        }
+        catch (Exception ex)
+        {
+            // Không để lỗi PayOS làm hỏng cả request
+            _logger.LogWarning(ex,
+                "Failed to auto-verify PayOS subscription {SubId} — returning null",
+                pendingSub.Id);
+            return null;
+        }
     }
 
     // ─── Cancel: giữ đến hết kỳ ─────────────────────────────────────────────
