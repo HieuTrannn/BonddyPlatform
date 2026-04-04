@@ -14,4 +14,6 @@ public interface IUserService
     Task<UserResponseDto> UpdateUserProfileAsync(Guid id, UserUpdateRequestDto dto);
     Task<UserResponseDto?> UploadAvatarAsync(Guid id, IFormFile profilePicture);
     Task DeleteAsync(Guid id);
+    /// <summary>Toggle IsActive: Active ↔ Inactive. Returns updated DTO.</summary>
+    Task<UserResponseDto?> ToggleActiveAsync(Guid id);
 }

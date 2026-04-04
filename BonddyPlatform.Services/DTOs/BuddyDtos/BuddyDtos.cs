@@ -74,4 +74,22 @@ public class BuddyResponseDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    // ── Subscription info (null nếu chưa mua gói) ────────────────────────────
+    public BuddySubscriptionSummaryDto? Subscription { get; set; }
+}
+
+/// <summary>Tóm tắt thông tin gói dịch vụ buddy đang dùng.</summary>
+public class BuddySubscriptionSummaryDto
+{
+    public Guid SubscriptionId { get; set; }
+    public Guid ServicePackageId { get; set; }
+    public string PackageName { get; set; } = string.Empty;
+    public decimal CommissionRate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public decimal AmountPaid { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public DateTime? PaidAt { get; set; }
 }

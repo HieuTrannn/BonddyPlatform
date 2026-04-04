@@ -17,6 +17,8 @@ public class User
     public string? aboutMe { get; set; } = string.Empty;
     public string? ProfilePicture { get; set; } = string.Empty;
     public bool IsEmailVerified { get; set; }
+    /// <summary>Tài khoản đang active hay bị vô hiệu hóa (banned)</summary>
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

@@ -31,7 +31,8 @@ public class UserService : IUserService
 
     public async Task<PagedResultDto<UserResponseDto>> GetPagedAsync(UserSearchRequestDto request)
     {
-        var query = _uow.Users.GetQueryable();
+        var query = _uow.Users.GetQueryable()
+            .Where(u => u.Roles.All(r => r.Role != Role.Admin)); // Loại bỏ tài khoản Admin
 
         query = query.ApplySearchByProperties(
             request.Search,
@@ -52,6 +53,12 @@ public class UserService : IUserService
 
         if (request.CreatedTo.HasValue)
             query = query.Where(u => u.CreatedAt <= request.CreatedTo.Value);
+
+        if (request.Role.HasValue)
+            query = query.Where(u => u.Roles.Any(r => r.Role == request.Role.Value));
+
+        if (request.IsActive.HasValue)
+            query = query.Where(u => u.IsActive == request.IsActive.Value);
 
         var totalCount = await query.CountAsync();
 
@@ -196,7 +203,25 @@ public class UserService : IUserService
         AboutMe = user.aboutMe,
         ProfilePicture = user.ProfilePicture,
         IsEmailVerified = user.IsEmailVerified,
+        IsActive = user.IsActive,
         CreatedAt = user.CreatedAt,
         UpdatedAt = user.UpdatedAt
     };
+
+    public async Task<UserResponseDto?> ToggleActiveAsync(Guid id)
+    {
+        var user = await _uow.Users.GetByIdAsync(id);
+        if (user is null) return null;
+
+        user.IsActive = !user.IsActive;
+        user.UpdatedAt = DateTime.UtcNow;
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "User {UserId} status toggled to {Status}",
+            user.Id, user.IsActive ? "Active" : "Inactive");
+
+        return MapToDto(user);
+    }
 }
