@@ -32,4 +32,9 @@ public class UserSearchRequestDto : BaseSearchRequestDto
     /// Filter by role: User | Buddy | CS (Admin bị loại trừ khỏi danh sách)
     /// </summary>
     public Role? Role { get; set; }
+
+    /// <summary>
+    /// Filter by account status: true = Active, false = Inactive/Banned
+    /// </summary>
+    public bool? IsActive { get; set; }
 }

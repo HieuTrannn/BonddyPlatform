@@ -20,13 +20,13 @@ public class BuddiesController : ApiControllerBase
 
     // ─── PUBLIC ──────────────────────────────────────────────────────────────
 
-    /// <summary>Lấy danh sách buddy đang active (dùng cho trang browse buddies)</summary>
+    /// <summary>Lấy danh sách buddy đang active, kèm thông tin gói dịch vụ (nếu có)</summary>
     [HttpGet]
-    [SwaggerOperation(Summary = "Lấy danh sách buddy đang active")]
+    [SwaggerOperation(Summary = "Lấy danh sách buddy đang active (kèm thông tin gói)")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
     public async Task<IActionResult> GetAllActive()
     {
-        var result = await _buddyService.GetAllActiveAsync();
+        var result = await _buddyService.GetAllActiveWithSubscriptionAsync();
         return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Buddies fetched successfully"));
     }
 

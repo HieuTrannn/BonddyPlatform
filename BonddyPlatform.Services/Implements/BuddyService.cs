@@ -101,7 +101,7 @@ public class BuddyService : IBuddyService
 
         return new PagedResultDto<BuddyResponseDto>
         {
-            Items = items.Select(ToDto),
+            Items = items.Select(b => ToDto(b)),
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize
@@ -123,13 +123,19 @@ public class BuddyService : IBuddyService
     public async Task<IEnumerable<BuddyResponseDto>> GetAllActiveAsync()
     {
         var buddies = await _uow.Buddies.GetAllActiveAsync();
-        return buddies.Select(ToDto);
+        var result = new List<BuddyResponseDto>();
+        foreach (var b in buddies)
+        {
+            var sub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(b.Id);
+            result.Add(ToDto(b, sub));
+        }
+        return result;
     }
 
     public async Task<IEnumerable<BuddyResponseDto>> GetAllAsync()
     {
         var buddies = await _uow.Buddies.GetAllWithUserAsync();
-        return buddies.Select(ToDto);
+        return buddies.Select(b => ToDto(b));
     }
 
     public async Task<BuddyResponseDto?> UpdateAsync(Guid id, BuddyUpdateRequestDto dto)
@@ -224,7 +230,32 @@ public class BuddyService : IBuddyService
         return ToDto(buddy);
     }
 
-    private static BuddyResponseDto ToDto(Buddy b) => new()
+    public async Task<IEnumerable<BuddyResponseDto>> GetAllActiveWithSubscriptionAsync()
+    {
+        var buddies = await _uow.Buddies.GetAllActiveAsync();
+        var result = new List<BuddyResponseDto>();
+        foreach (var b in buddies)
+        {
+            var sub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(b.Id);
+            result.Add(ToDto(b, sub));
+        }
+        return result;
+    }
+
+    public async Task<IEnumerable<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync()
+    {
+        var buddies = await _uow.Buddies.GetAllActiveAsync();
+        var result = new List<BuddyResponseDto>();
+        foreach (var b in buddies)
+        {
+            var sub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(b.Id);
+            if (sub is not null)
+                result.Add(ToDto(b, sub));
+        }
+        return result;
+    }
+
+    private static BuddyResponseDto ToDto(Buddy b, BuddySubscription? sub = null) => new()
     {
         Id = b.Id,
         UserId = b.UserId,
@@ -243,6 +274,19 @@ public class BuddyService : IBuddyService
         Bio = b.Bio,
         IsActive = b.IsActive,
         CreatedAt = b.CreatedAt,
-        UpdatedAt = b.UpdatedAt
+        UpdatedAt = b.UpdatedAt,
+        Subscription = sub is null ? null : new BuddySubscriptionSummaryDto
+        {
+            SubscriptionId = sub.Id,
+            ServicePackageId = sub.ServicePackageId,
+            PackageName = sub.ServicePackage?.Name ?? string.Empty,
+            CommissionRate = sub.ServicePackage?.CommissionRate ?? 0,
+            Status = sub.Status.ToString(),
+            StartDate = sub.StartDate,
+            EndDate = sub.EndDate,
+            AmountPaid = sub.AmountPaid,
+            Currency = sub.ServicePackage?.Currency ?? string.Empty,
+            PaidAt = sub.PaidAt
+        }
     };
 }

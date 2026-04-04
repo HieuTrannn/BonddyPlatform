@@ -25,4 +25,14 @@ public interface IBuddyService
     Task<bool> DeleteAsync(Guid id);
     /// <summary>Toggle IsActive: Active ↔ Inactive. Returns updated DTO.</summary>
     Task<BuddyResponseDto?> ToggleActiveAsync(Guid id);
+
+    /// <summary>
+    /// Lấy tất cả buddy active, kèm thông tin gói đang dùng (nếu có).
+    /// </summary>
+    Task<IEnumerable<BuddyResponseDto>> GetAllActiveWithSubscriptionAsync();
+
+    /// <summary>
+    /// Lấy tất cả buddy đã có gói dịch vụ active (đã mua gói).
+    /// </summary>
+    Task<IEnumerable<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync();
 }

@@ -57,6 +57,9 @@ public class UserService : IUserService
         if (request.Role.HasValue)
             query = query.Where(u => u.Roles.Any(r => r.Role == request.Role.Value));
 
+        if (request.IsActive.HasValue)
+            query = query.Where(u => u.IsActive == request.IsActive.Value);
+
         var totalCount = await query.CountAsync();
 
         query = query.ApplySorting(
