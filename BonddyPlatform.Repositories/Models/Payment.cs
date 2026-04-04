@@ -6,8 +6,13 @@ public class Payment
 {
     public Guid Id { get; set; }
 
-    public Guid BookingId { get; set; }
-    public Booking Booking { get; set; } = null!;
+    /// <summary>FK → Booking (null nếu payment dành cho subscription)</summary>
+    public Guid? BookingId { get; set; }
+    public Booking? Booking { get; set; }
+
+    /// <summary>FK → BuddySubscription (null nếu payment dành cho booking)</summary>
+    public Guid? BuddySubscriptionId { get; set; }
+    public BuddySubscription? BuddySubscription { get; set; }
 
     public decimal Amount { get; set; }
 

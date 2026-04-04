@@ -229,7 +229,7 @@ public class PaymentService : IPaymentService
 
         var payment = await _uow.Payments.GetByIdAsync(paymentId)
             ?? throw new KeyNotFoundException("Payment not found.");
-        var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId)
+        var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId!.Value)
             ?? throw new KeyNotFoundException("Booking not found.");
 
         if (booking.TravelerUserId != requesterUserId)
@@ -313,7 +313,10 @@ public class PaymentService : IPaymentService
         if (payment == null)
             return new PayPalWebhookResultDto { Processed = false, Message = "No matching payment found." };
 
-        var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId);
+        if (payment.BookingId is null)
+            return new PayPalWebhookResultDto { Processed = false, Message = "Payment is not a booking payment." };
+
+        var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId.Value);
         if (booking == null)
             return new PayPalWebhookResultDto { Processed = false, Message = "Booking not found for payment." };
 
@@ -504,6 +507,7 @@ public class PaymentService : IPaymentService
     {
         Id = p.Id,
         BookingId = p.BookingId,
+        BuddySubscriptionId = p.BuddySubscriptionId,
         Amount = p.Amount,
         Method = p.Method,
         Status = p.Status,
@@ -661,7 +665,7 @@ public class PaymentService : IPaymentService
                 payment.UpdatedAt = DateTime.UtcNow;
                 _uow.Payments.Update(payment);
 
-                var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId);
+                var booking = await _uow.Bookings.GetByIdAsync(payment.BookingId!.Value);
                 if (booking is not null && booking.Status == BookingStatus.PendingPayment)
                 {
                     booking.Status = BookingStatus.Confirmed;
@@ -711,6 +715,32 @@ public class PaymentService : IPaymentService
                 }
 
                 _uow.BuddySubscriptions.Update(subscription);
+
+                // ─── Tạo Payment record để lưu lịch sử thanh toán ────────────
+                var existingPayment = await _uow.Payments
+                    .GetQueryable()
+                    .FirstOrDefaultAsync(p => p.BuddySubscriptionId == subscription.Id);
+
+                if (existingPayment is null)
+                {
+                    var payment = new Payment
+                    {
+                        Id = Guid.NewGuid(),
+                        BuddySubscriptionId = subscription.Id,
+                        BookingId = null,
+                        Amount = subscription.AmountPaid,
+                        Method = PaymentMethod.PayOS,
+                        Status = PaymentStatus.Released, // Subscription payment = released immediately (không có escrow)
+                        ExternalRef = subscription.ExternalPaymentRef,
+                        PayOsOrderCode = subscription.PayOsOrderCode,
+                        HeldAt = DateTime.UtcNow,
+                        ReleasedAt = DateTime.UtcNow,
+                        Note = $"Subscription payment for package {subscription.ServicePackage?.Name ?? subscription.ServicePackageId.ToString()}",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _uow.Payments.AddAsync(payment);
+                }
+
                 await _uow.SaveChangesAsync();
 
                 _logger.LogInformation(

@@ -170,7 +170,41 @@ public class ServicePackagesController : ApiControllerBase
         }
     }
 
+    /// <summary>
+    /// Verify PayOS subscription payment và activate nếu đã thanh toán.
+    /// Gọi endpoint này sau khi PayOS redirect về app (thay thế webhook khi dev local).
+    /// </summary>
+    [Authorize(Roles = "Buddy")]
+    [HttpPost("subscriptions/{subscriptionId:guid}/verify-payos")]
+    [SwaggerOperation(
+        Summary = "Verify PayOS subscription payment",
+        Description = "Gọi PayOS API để kiểm tra trạng thái thanh toán. Nếu PAID → activate subscription ngay. Dùng sau khi PayOS redirect về.")]
+    [SwaggerResponse(200, "Success — subscription activated", typeof(ApiResponse<BuddySubscriptionResponseDto>))]
+    [SwaggerResponse(400, "Payment not completed yet", typeof(ApiResponse<object>))]
+    public async Task<IActionResult> VerifyPayOsSubscription(Guid subscriptionId)
+    {
+        try
+        {
+            var userId = GetCurrentUserIdOrThrow();
+            var result = await _servicePackageService.VerifyPayOsSubscriptionAsync(userId, subscriptionId);
+            return Ok(ApiResponse<BuddySubscriptionResponseDto>.SuccessResponse(result, "Payment verified. Subscription is now active."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.ErrorResponse(ex.Message));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.ErrorResponse(ex.Message));
+        }
+    }
+
     /// <summary>Buddy xem gói dịch vụ hiện tại</summary>
+
     [Authorize(Roles = "Buddy")]
     [HttpGet("my-subscription")]
     [SwaggerOperation(Summary = "Buddy xem gói dịch vụ đang active")]

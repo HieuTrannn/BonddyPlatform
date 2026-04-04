@@ -20,7 +20,8 @@ public class PaymentTransitionRequestDto
 public class PaymentResponseDto
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
+    public Guid? BookingId { get; set; }
+    public Guid? BuddySubscriptionId { get; set; }
     public decimal Amount { get; set; }
     public PaymentMethod Method { get; set; }
     public string MethodName => Method.ToString();
