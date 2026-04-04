@@ -105,6 +105,15 @@ public class AdminController : ApiControllerBase
 
     // ─── BOOKINGS ────────────────────────────────────────────────────────────
 
+    [HttpGet("bookings")]
+    [SwaggerOperation(Summary = "Admin: lấy tất cả bookings (paged, search, filter)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
+    public async Task<IActionResult> GetAllBookings([FromQuery] BookingSearchRequestDto request)
+    {
+        var result = await _bookingService.GetAllPagedAsync(request);
+        return Ok(ApiResponse<object>.SuccessResponse(result, "Bookings fetched successfully"));
+    }
+
     [HttpGet("trips/{tripId:guid}/bookings")]
     [SwaggerOperation(Summary = "Admin: lấy danh sách bookings theo trip")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BookingResponseDto>>))]

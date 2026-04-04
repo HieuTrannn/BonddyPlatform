@@ -1,7 +1,10 @@
 using BonddyPlatform.Repositories.Interfaces;
 using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Services.DTOs.BookingDtos;
+using BonddyPlatform.Services.DTOs.Common;
+using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace BonddyPlatform.Services.Implements;
 
@@ -369,6 +372,61 @@ public class BookingService : IBookingService
         _uow.Bookings.Update(booking);
         await _uow.SaveChangesAsync();
         return ToDto(booking);
+    }
+
+    // ─── Admin: GetAllPagedAsync ──────────────────────────────────────────────
+
+    public async Task<PagedResultDto<BookingResponseDto>> GetAllPagedAsync(BookingSearchRequestDto request)
+    {
+        var query = _uow.Bookings.GetQueryable()
+            .Include(b => b.Buddy).ThenInclude(buddy => buddy!.User)
+            .Include(b => b.TravelerUser)
+            .AsQueryable();
+
+        // Free-text search trên BuddyName, TravelerName
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var kw = request.Search.Trim().ToLower();
+            query = query.Where(b =>
+                (b.Buddy != null && b.Buddy.User != null && b.Buddy.User.FullName.ToLower().Contains(kw)) ||
+                (b.TravelerUser != null && b.TravelerUser.FullName.ToLower().Contains(kw)));
+        }
+
+        if (request.Status.HasValue)
+            query = query.Where(b => b.Status == request.Status.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.BuddyName))
+        {
+            var kw = request.BuddyName.Trim().ToLower();
+            query = query.Where(b => b.Buddy != null && b.Buddy.User != null &&
+                                     b.Buddy.User.FullName.ToLower().Contains(kw));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TravelerName))
+        {
+            var kw = request.TravelerName.Trim().ToLower();
+            query = query.Where(b => b.TravelerUser != null &&
+                                     b.TravelerUser.FullName.ToLower().Contains(kw));
+        }
+
+        if (request.BookedFrom.HasValue)
+            query = query.Where(b => b.BookedDate >= request.BookedFrom.Value);
+
+        if (request.BookedTo.HasValue)
+            query = query.Where(b => b.BookedDate <= request.BookedTo.Value);
+
+        var totalCount = await query.CountAsync();
+
+        query = query.ApplySorting(request.SortBy ?? nameof(Booking.CreatedAt), request.SortOrder);
+        var items = await query.ApplyPaging(request.Page, request.PageSize).ToListAsync();
+
+        return new PagedResultDto<BookingResponseDto>
+        {
+            Items = items.Select(ToDto),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
     }
 
     // ─── Mapping ──────────────────────────────────────────────────────────────

@@ -165,6 +165,17 @@ public class TripService : ITripService
 
     private static IQueryable<Trip> ApplyFilters(IQueryable<Trip> query, TripSearchRequestDto request)
     {
+        // Free-text search: City, Notes, TravelerUser.FullName
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var kw = request.Search.Trim().ToLower();
+            query = query.Where(t =>
+                t.City.ToLower().Contains(kw) ||
+                (t.Notes != null && t.Notes.ToLower().Contains(kw)) ||
+                (t.TravelerUser != null && t.TravelerUser.FullName.ToLower().Contains(kw)));
+        }
+
+        // City exact filter (nếu có — dùng khi FE muốn filter cụ thể)
         if (!string.IsNullOrWhiteSpace(request.City))
             query = query.Where(t => t.City == request.City);
 

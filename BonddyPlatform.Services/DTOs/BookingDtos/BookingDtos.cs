@@ -1,7 +1,27 @@
 using BonddyPlatform.Repositories.Models;
+using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.DTOs.PaymentDtos;
 
 namespace BonddyPlatform.Services.DTOs.BookingDtos;
+
+/// <summary>Admin search/filter request for all bookings.</summary>
+public class BookingSearchRequestDto : BaseSearchRequestDto
+{
+    /// <summary>Filter by booking status.</summary>
+    public BookingStatus? Status { get; set; }
+
+    /// <summary>Filter by buddy name (keyword).</summary>
+    public string? BuddyName { get; set; }
+
+    /// <summary>Filter by traveler name (keyword).</summary>
+    public string? TravelerName { get; set; }
+
+    /// <summary>Filter booked date from.</summary>
+    public DateOnly? BookedFrom { get; set; }
+
+    /// <summary>Filter booked date to.</summary>
+    public DateOnly? BookedTo { get; set; }
+}
 
 /// <summary>
 /// Buddy tạo booking từ một TripRequest đã tồn tại.
