@@ -213,6 +213,19 @@ public class AdminController : ApiControllerBase
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, $"Buddy status changed to {status}."));
     }
 
+    /// <summary>Admin duyệt hồ sơ đăng ký buddy: kích hoạt profile và cấp role Buddy</summary>
+    [HttpPatch("buddies/{id:guid}/approve")]
+    [SwaggerOperation(Summary = "Admin: duyệt đăng ký làm buddy (cấp role Buddy + IsActive = true)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
+    [SwaggerResponse(404, "Buddy not found")]
+    public async Task<IActionResult> ApproveBuddy(Guid id)
+    {
+        var result = await _buddyService.ApproveBuddyAsync(id);
+        if (result is null) return NotFound("Buddy not found.");
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result,
+            "Buddy đã được duyệt và cấp quyền thành công."));
+    }
+
     // ─── REVIEWS ─────────────────────────────────────────────────────────────
 
     [HttpGet("bookings/{bookingId:guid}/review")]

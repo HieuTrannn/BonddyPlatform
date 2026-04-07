@@ -163,12 +163,14 @@ public class ChatService : IChatService
 
         var otherUserId = otherParticipant?.UserId;
         var otherUserName = otherParticipant?.User?.FullName;
+        var otherUserProfilePicture = otherParticipant?.User?.ProfilePicture;
         var isOnline = otherUserId.HasValue && _presenceTracker.IsOnline(otherUserId.Value);
 
         return new ChatRoomMessagesDto
         {
             OtherUserId = otherUserId,
             OtherUserName = otherUserName,
+            OtherUserProfilePicture = otherUserProfilePicture,
             IsOnline = isOnline,
             Items = items.Select(MapMessageToDto),
             TotalCount = totalCount,
@@ -309,6 +311,7 @@ public class ChatService : IChatService
             BuddyUserId = room.BuddyUserId,
             OtherUserId = other?.UserId,
             OtherUserName = other?.User?.FullName,
+            OtherUserProfilePicture = other?.User?.ProfilePicture,
             LastMessage = FormatLastMessagePreview(lastMessage, currentUserId),
             LastMessageAt = lastMessage?.CreatedAt
         };
@@ -351,6 +354,8 @@ public class ChatService : IChatService
         Id = message.Id,
         RoomId = message.RoomId,
         SenderUserId = message.SenderUserId,
+        SenderFullName = message.SenderUser?.FullName,
+        SenderProfilePicture = message.SenderUser?.ProfilePicture,
         ContentType = message.ContentType.ToString(),
         ContentText = message.ContentText,
         BookingId = message.BookingId,

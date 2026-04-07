@@ -100,17 +100,18 @@ public class BuddiesController : ApiControllerBase
 
     // ─── ADMIN ────────────────────────────────────────────────────────────────
 
-    /// <summary>User đăng ký làm buddy</summary>
+    /// <summary>User đăng ký làm buddy (chờ admin duyệt)</summary>
     [Authorize(Roles = "User")]
     [HttpPost("register-as-buddy")]
-    [SwaggerOperation(Summary = "User đăng ký làm buddy")]
+    [SwaggerOperation(Summary = "User đăng ký làm buddy (hồ sơ sẽ chờ admin duyệt)")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
     public async Task<IActionResult> RegisterAsBuddy([FromBody] BuddyRegisterRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();
         var result = await _buddyService.RegisterAsync(userId, dto);
         if (result is null) return BadRequest("Failed to register buddy profile.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy registered successfully"));
+        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result,
+            "Đăng ký thành công, vui lòng chờ duyệt và nhận thông báo sau"));
     }
 
     /// <summary>Admin cập nhật buddy profile theo BuddyId</summary>

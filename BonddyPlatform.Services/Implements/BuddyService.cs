@@ -4,6 +4,7 @@ using BonddyPlatform.Services.DTOs.BuddyDtos;
 using BonddyPlatform.Services.DTOs.Common;
 using BonddyPlatform.Services.Helpers;
 using BonddyPlatform.Services.Interfaces;
+using BonddyPlatform.Services.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,11 +14,13 @@ public class BuddyService : IBuddyService
 {
     private readonly IUnitOfWork _uow;
     private readonly FirebaseService _firebaseService;
+    private readonly IEmailSender _emailSender;
 
-    public BuddyService(IUnitOfWork uow, FirebaseService firebaseService)
+    public BuddyService(IUnitOfWork uow, FirebaseService firebaseService, IEmailSender emailSender)
     {
         _uow = uow;
         _firebaseService = firebaseService;
+        _emailSender = emailSender;
     }
 
     public async Task<BuddyResponseDto> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto)
@@ -38,16 +41,12 @@ public class BuddyService : IBuddyService
             Languages = dto.Languages,
             Bio = dto.Bio,
             Rate = 0m,
-            IsActive = true,
+            IsActive = false,   // chờ admin duyệt
             CreatedAt = DateTime.UtcNow
         };
 
         await _uow.Buddies.AddAsync(buddy);
-
-        // Add Buddy role if user doesn't already have it (user keeps existing roles too)
-        if (!await _uow.UserRoles.HasRoleAsync(userId, Role.Buddy))
-            await _uow.UserRoles.AddAsync(new UserRole { UserId = userId, Role = Role.Buddy });
-
+        // Không cấp role Buddy ngay – phải đợi admin duyệt
         await _uow.SaveChangesAsync();
 
         var full = await _uow.Buddies.GetByIdWithUserAsync(buddy.Id);
@@ -228,6 +227,39 @@ public class BuddyService : IBuddyService
         await _uow.SaveChangesAsync();
 
         return ToDto(buddy);
+    }
+
+    /// <summary>
+    /// Admin duyệt yêu cầu làm buddy: set IsActive = true và cấp role Buddy.
+    /// </summary>
+    public async Task<BuddyResponseDto?> ApproveBuddyAsync(Guid buddyId)
+    {
+        var buddy = await _uow.Buddies.GetByIdWithUserAsync(buddyId);
+        if (buddy is null) return null;
+
+        buddy.IsActive = true;
+        buddy.UpdatedAt = DateTime.UtcNow;
+        _uow.Buddies.Update(buddy);
+
+        // Cấp role Buddy nếu chưa có
+        if (!await _uow.UserRoles.HasRoleAsync(buddy.UserId, Role.Buddy))
+            await _uow.UserRoles.AddAsync(new UserRole { UserId = buddy.UserId, Role = Role.Buddy });
+
+        await _uow.SaveChangesAsync();
+
+        // Gửi email thông báo chào mừng
+        var user = buddy.User;
+        if (user is not null && !string.IsNullOrWhiteSpace(user.Email))
+        {
+            var firstName = user.FullName?.Split(' ').LastOrDefault() ?? user.FullName ?? "Buddy";
+            await _emailSender.SendEmailAsync(
+                user.Email,
+                "Chúc mừng! Bạn đã trở thành Buddy chính thức trên Bonddy",
+                EmailTemplates.BuildBuddyApprovedEmailHtml(user.FullName ?? firstName, firstName));
+        }
+
+        var refreshed = await _uow.Buddies.GetByIdWithUserAsync(buddyId);
+        return ToDto(refreshed!);
     }
 
     public async Task<IEnumerable<BuddyResponseDto>> GetAllActiveWithSubscriptionAsync()

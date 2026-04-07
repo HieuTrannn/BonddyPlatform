@@ -26,6 +26,9 @@ public interface IBuddyService
     /// <summary>Toggle IsActive: Active ↔ Inactive. Returns updated DTO.</summary>
     Task<BuddyResponseDto?> ToggleActiveAsync(Guid id);
 
+    /// <summary>Admin duyệt yêu cầu làm buddy: set IsActive = true và cấp role Buddy.</summary>
+    Task<BuddyResponseDto?> ApproveBuddyAsync(Guid buddyId);
+
     /// <summary>
     /// Lấy tất cả buddy active, kèm thông tin gói đang dùng (nếu có).
     /// </summary>

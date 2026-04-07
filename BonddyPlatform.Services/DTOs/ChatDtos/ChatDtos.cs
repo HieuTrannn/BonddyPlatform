@@ -13,6 +13,8 @@ public class ChatRoomDto
     public Guid? OtherUserId { get; set; }
     /// <summary>Full name of the other participant.</summary>
     public string? OtherUserName { get; set; }
+    /// <summary>Profile picture URL of the other participant.</summary>
+    public string? OtherUserProfilePicture { get; set; }
     /// <summary>Preview text of the most recent message in this room.</summary>
     public string? LastMessage { get; set; }
     /// <summary>Timestamp of the most recent message in this room.</summary>
@@ -24,6 +26,10 @@ public class MessageDto
     public Guid Id { get; set; }
     public Guid RoomId { get; set; }
     public Guid SenderUserId { get; set; }
+    /// <summary>Full name of the sender.</summary>
+    public string? SenderFullName { get; set; }
+    /// <summary>Profile picture URL of the sender.</summary>
+    public string? SenderProfilePicture { get; set; }
     public string ContentType { get; set; } = string.Empty;
     public string? ContentText { get; set; }
     /// <summary>Non-null when ContentType = BookingCard.</summary>
@@ -40,6 +46,8 @@ public class ChatRoomMessagesDto
     public Guid? OtherUserId { get; set; }
     /// <summary>Full name of the other participant.</summary>
     public string? OtherUserName { get; set; }
+    /// <summary>Profile picture URL of the other participant.</summary>
+    public string? OtherUserProfilePicture { get; set; }
     /// <summary>Whether the other participant is currently online.</summary>
     public bool IsOnline { get; set; }
     public IEnumerable<MessageDto> Items { get; set; } = Enumerable.Empty<MessageDto>();

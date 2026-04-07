@@ -18,6 +18,7 @@ public class MessageRepository : GenericRepository<Message>, IMessageRepository
 
         return await _context.Messages
             .AsNoTracking()
+            .Include(m => m.SenderUser)
             .Where(m => m.RoomId == roomId)
             .OrderByDescending(m => m.CreatedAt)
             .Skip((page - 1) * pageSize)
