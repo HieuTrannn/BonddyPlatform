@@ -51,6 +51,16 @@ public class AdminController : ApiControllerBase
         return Ok(ApiResponse<object>.SuccessResponse(result, "Users fetched successfully"));
     }
 
+    [HttpPost("users")]
+    [SwaggerOperation(Summary = "Admin: bulk tạo nhiều tài khoản user mới (không cần verify email)")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<BulkCreateUserResultDto>))]
+    public async Task<IActionResult> CreateUsers([FromBody] List<UserCreateRequestDto> dtos)
+    {
+        var result = await _userService.AdminCreateUserAsync(dtos);
+        return Ok(ApiResponse<BulkCreateUserResultDto>.SuccessResponse(result,
+            $"Bulk create completed: {result.TotalSucceeded} succeeded, {result.TotalFailed} failed."));
+    }
+
     [HttpGet("users/{id:guid}")]
     [SwaggerOperation(Summary = "Admin: lấy chi tiết một user")]
     [SwaggerResponse(200, "Success", typeof(ApiResponse<UserResponseDto>))]

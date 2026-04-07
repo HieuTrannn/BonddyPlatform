@@ -117,6 +117,64 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
+    public async Task<BulkCreateUserResultDto> AdminCreateUserAsync(List<UserCreateRequestDto> dtos)
+    {
+        var result = new BulkCreateUserResultDto { TotalRequested = dtos.Count };
+
+        foreach (var dto in dtos)
+        {
+            try
+            {
+                var existing = await _uow.Users.GetByEmailAsync(dto.Email);
+                if (existing != null)
+                {
+                    result.Failed.Add(new BulkCreateUserFailedItemDto
+                    {
+                        Email = dto.Email,
+                        Reason = "Email already exists."
+                    });
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Email = dto.Email.Trim(),
+                    Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                    FullName = dto.FullName.Trim(),
+                    Gender = dto.Gender,
+                    PhoneNumber = dto.PhoneNumber?.Trim(),
+                    Address = dto.Address?.Trim(),
+                    DateOfBirth = dto.DateOfBirth,
+                    aboutMe = dto.AboutMe?.Trim(),
+                    IsEmailVerified = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _uow.Users.AddAsync(user);
+                await _uow.SaveChangesAsync();
+
+                await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = dto.Role });
+                await _uow.SaveChangesAsync();
+
+                user = (await _uow.Users.GetByIdAsync(user.Id))!;
+                result.Succeeded.Add(MapToDto(user));
+            }
+            catch (Exception ex)
+            {
+                result.Failed.Add(new BulkCreateUserFailedItemDto
+                {
+                    Email = dto.Email,
+                    Reason = ex.Message
+                });
+            }
+        }
+
+        result.TotalSucceeded = result.Succeeded.Count;
+        result.TotalFailed = result.Failed.Count;
+        return result;
+    }
+
     public async Task<UserResponseDto> UpdateAsync(Guid id, UserUpdateRequestDto dto)
     {
         var user = await _uow.Users.GetByIdAsync(id);
