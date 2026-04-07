@@ -284,17 +284,50 @@ public class BuddyService : IBuddyService
         return result;
     }
 
-    public async Task<IEnumerable<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync()
+    public async Task<PagedResultDto<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync(BuddySearchRequestDto request)
     {
         var buddies = await _uow.Buddies.GetAllActiveAsync();
-        var result = new List<BuddyResponseDto>();
+        var allSubBuddies = new List<BuddyResponseDto>();
         foreach (var b in buddies)
         {
             var sub = await _uow.BuddySubscriptions.GetActiveByBuddyIdAsync(b.Id);
             if (sub is not null)
-                result.Add(ToDto(b, sub));
+                allSubBuddies.Add(ToDto(b, sub));
         }
-        return result;
+
+        var query = allSubBuddies.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim().ToLower();
+            query = query.Where(x => 
+                x.FullName.ToLower().Contains(search) || 
+                x.Email.ToLower().Contains(search) || 
+                (x.Bio != null && x.Bio.ToLower().Contains(search)));
+        }
+
+        if (request.IsActive.HasValue)
+            query = query.Where(x => x.IsActive == request.IsActive.Value);
+
+        var totalCount = query.Count();
+
+        query = (request.SortBy?.ToLower()) switch
+        {
+            "fullname" => request.SortOrder == "asc" ? query.OrderBy(x => x.FullName) : query.OrderByDescending(x => x.FullName),
+            "costperhour" => request.SortOrder == "asc" ? query.OrderBy(x => x.CostPerHour) : query.OrderByDescending(x => x.CostPerHour),
+            "rate" => request.SortOrder == "asc" ? query.OrderBy(x => x.Rate) : query.OrderByDescending(x => x.Rate),
+            _ => request.SortOrder == "asc" ? query.OrderBy(x => x.CreatedAt) : query.OrderByDescending(x => x.CreatedAt)
+        };
+
+        var items = query.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToList();
+
+        return new PagedResultDto<BuddyResponseDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
     }
 
     private static BuddyResponseDto ToDto(Buddy b, BuddySubscription? sub = null) => new()

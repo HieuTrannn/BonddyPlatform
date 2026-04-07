@@ -26,7 +26,7 @@ public class Buddy
     /// <summary>Languages the buddy can communicate in (stored as JSON)</summary>
     public List<string> Languages { get; set; } = new();
 
-    [MaxLength(300)]
+    [MaxLength(1000)]
     public string Bio { get; set; } = string.Empty;
 
     /// <summary>Whether this buddy is visible and accepting bookings</summary>

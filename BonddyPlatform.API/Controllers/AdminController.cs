@@ -174,11 +174,11 @@ public class AdminController : ApiControllerBase
     /// <summary>Lấy danh sách buddy đã mua gói dịch vụ (có active subscription)</summary>
     [HttpGet("buddies/with-subscription")]
     [SwaggerOperation(Summary = "Lấy danh sách buddy đã mua gói dịch vụ")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
-    public async Task<IActionResult> GetBuddiesWithSubscription()
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<object>))]
+    public async Task<IActionResult> GetBuddiesWithSubscription([FromQuery] BuddySearchRequestDto request)
     {
-        var result = await _buddyService.GetBuddiesWithActiveSubscriptionAsync();
-        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Buddies with subscription fetched successfully"));
+        var result = await _buddyService.GetBuddiesWithActiveSubscriptionAsync(request);
+        return Ok(ApiResponse<object>.SuccessResponse(result, "Buddies with subscription fetched successfully"));
     }
 
     [HttpGet("buddies/{id:guid}")]
