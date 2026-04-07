@@ -23,7 +23,7 @@ public class BuddyService : IBuddyService
         _emailSender = emailSender;
     }
 
-    public async Task<BuddyResponseDto> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto)
+    public async Task<string> RegisterAsync(Guid userId, BuddyRegisterRequestDto dto)
     {
         var existing = await _uow.Buddies.GetByUserIdAsync(userId);
         if (existing is not null)
@@ -49,8 +49,7 @@ public class BuddyService : IBuddyService
         // Không cấp role Buddy ngay – phải đợi admin duyệt
         await _uow.SaveChangesAsync();
 
-        var full = await _uow.Buddies.GetByIdWithUserAsync(buddy.Id);
-        return ToDto(full!);
+        return "Đăng ký thành công! Hồ sơ của bạn đang chờ admin duyệt, bạn sẽ nhận được thông báo qua email khi được chấp thuận.";
     }
 
     public async Task<PagedResultDto<BuddyResponseDto>> GetPagedAsync(BuddySearchRequestDto request)
@@ -129,6 +128,17 @@ public class BuddyService : IBuddyService
             result.Add(ToDto(b, sub));
         }
         return result;
+    }
+
+    public async Task<IEnumerable<BuddyResponseDto>> GetPendingApplicantsAsync()
+    {
+        var pending = await _uow.Buddies.GetQueryable()
+            .Include(b => b.User)
+            .Where(b => !b.IsActive)
+            .OrderBy(b => b.CreatedAt)
+            .ToListAsync();
+
+        return pending.Select(b => ToDto(b));
     }
 
     public async Task<IEnumerable<BuddyResponseDto>> GetAllAsync()

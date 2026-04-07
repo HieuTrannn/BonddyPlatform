@@ -104,14 +104,23 @@ public class BuddiesController : ApiControllerBase
     [Authorize(Roles = "User")]
     [HttpPost("register-as-buddy")]
     [SwaggerOperation(Summary = "User đăng ký làm buddy (hồ sơ sẽ chờ admin duyệt)")]
-    [SwaggerResponse(200, "Success", typeof(ApiResponse<BuddyResponseDto>))]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<string>))]
     public async Task<IActionResult> RegisterAsBuddy([FromBody] BuddyRegisterRequestDto dto)
     {
         var userId = GetCurrentUserIdOrThrow();
-        var result = await _buddyService.RegisterAsync(userId, dto);
-        if (result is null) return BadRequest("Failed to register buddy profile.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result,
-            "Đăng ký thành công, vui lòng chờ duyệt và nhận thông báo sau"));
+        var message = await _buddyService.RegisterAsync(userId, dto);
+        return Ok(ApiResponse<string>.SuccessResponse(message, "Đăng ký thành công"));
+    }
+
+    /// <summary>Admin xem danh sách user đang apply làm buddy (chưa được duyệt)</summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("pending-applicants")]
+    [SwaggerOperation(Summary = "Admin xem danh sách user đang chờ duyệt làm buddy")]
+    [SwaggerResponse(200, "Success", typeof(ApiResponse<IEnumerable<BuddyResponseDto>>))]
+    public async Task<IActionResult> GetPendingApplicants()
+    {
+        var result = await _buddyService.GetPendingApplicantsAsync();
+        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Danh sách chờ duyệt"));
     }
 
     /// <summary>Admin cập nhật buddy profile theo BuddyId</summary>
