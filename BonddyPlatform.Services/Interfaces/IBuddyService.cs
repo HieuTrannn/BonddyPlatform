@@ -38,7 +38,7 @@ public interface IBuddyService
     Task<IEnumerable<BuddyResponseDto>> GetAllActiveWithSubscriptionAsync();
 
     /// <summary>
-    /// Lấy tất cả buddy đã có gói dịch vụ active (đã mua gói).
+    /// Lấy tất cả buddy đã có gói dịch vụ active (đã mua gói) (paged).
     /// </summary>
-    Task<IEnumerable<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync();
+    Task<PagedResultDto<BuddyResponseDto>> GetBuddiesWithActiveSubscriptionAsync(BuddySearchRequestDto request);
 }
