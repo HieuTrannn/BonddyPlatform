@@ -154,7 +154,7 @@ public class UserService : IUserService
                 await _uow.Users.AddAsync(user);
                 await _uow.SaveChangesAsync();
 
-                await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = dto.Role });
+                await _uow.UserRoles.AddAsync(new UserRole { UserId = user.Id, Role = Role.User });
                 await _uow.SaveChangesAsync();
 
                 user = (await _uow.Users.GetByIdAsync(user.Id))!;
