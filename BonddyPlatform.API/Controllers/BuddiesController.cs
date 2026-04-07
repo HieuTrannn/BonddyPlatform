@@ -109,7 +109,7 @@ public class BuddiesController : ApiControllerBase
     {
         var userId = GetCurrentUserIdOrThrow();
         var message = await _buddyService.RegisterAsync(userId, dto);
-        return Ok(ApiResponse<string>.SuccessResponse(message, "Đăng ký thành công"));
+        return Ok(ApiResponse<string>.SuccessResponse(message, "Register successfully"));
     }
 
     /// <summary>Admin xem danh sách user đang apply làm buddy (chưa được duyệt)</summary>
@@ -120,7 +120,7 @@ public class BuddiesController : ApiControllerBase
     public async Task<IActionResult> GetPendingApplicants()
     {
         var result = await _buddyService.GetPendingApplicantsAsync();
-        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Danh sách chờ duyệt"));
+        return Ok(ApiResponse<IEnumerable<BuddyResponseDto>>.SuccessResponse(result, "Pending applicants fetched successfully"));
     }
 
     /// <summary>Admin cập nhật buddy profile theo BuddyId</summary>

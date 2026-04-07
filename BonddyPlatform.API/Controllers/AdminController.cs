@@ -222,7 +222,7 @@ public class AdminController : ApiControllerBase
         var result = await _buddyService.ApproveBuddyAsync(id);
         if (result is null) return NotFound("Buddy not found.");
         return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result,
-            "Buddy đã được duyệt và cấp quyền thành công."));
+            "Buddy approved successfully."));
     }
 
     // ─── REVIEWS ─────────────────────────────────────────────────────────────
