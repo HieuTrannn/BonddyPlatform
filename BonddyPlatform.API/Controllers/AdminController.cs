@@ -187,8 +187,7 @@ public class AdminController : ApiControllerBase
     public async Task<IActionResult> RegisterBuddy(Guid userId, [FromBody] BuddyRegisterRequestDto dto)
     {
         var result = await _buddyService.RegisterAsync(userId, dto);
-        if (result is null) return BadRequest("Failed to register buddy profile.");
-        return Ok(ApiResponse<BuddyResponseDto>.SuccessResponse(result, "Buddy registered successfully"));
+        return Ok(ApiResponse<string>.SuccessResponse(result, "Buddy registered successfully"));
     }
 
     [HttpPut("buddies/{id:guid}")]
