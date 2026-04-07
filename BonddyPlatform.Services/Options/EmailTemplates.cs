@@ -322,7 +322,7 @@ public static class EmailTemplates
                   <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center" style="padding-bottom:36px;">
-                        <a href="https://www.bonddy.vn/login"
+                        <a href="https://www.bonddy.vn/login?refreshSession=1&callbackUrl=/buddy"
                            style="display:inline-block;background:linear-gradient(135deg,#0f3460,#16213e);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:16px 48px;border-radius:50px;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(15,52,96,0.35);"
                            target="_blank">Truy cập trang quản lí Buddy</a>
                       </td>
