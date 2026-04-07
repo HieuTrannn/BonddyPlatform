@@ -49,7 +49,7 @@ public class BuddyService : IBuddyService
         // Không cấp role Buddy ngay – phải đợi admin duyệt
         await _uow.SaveChangesAsync();
 
-        return "Đăng ký thành công! Hồ sơ của bạn đang chờ admin duyệt, bạn sẽ nhận được thông báo qua email khi được chấp thuận.";
+        return "Register successfully, please wait for admin approval and you will receive an email notification when approved";
     }
 
     public async Task<PagedResultDto<BuddyResponseDto>> GetPagedAsync(BuddySearchRequestDto request)
@@ -205,7 +205,7 @@ public class BuddyService : IBuddyService
         if (user is null) return null;
 
         if (avatar.Length > 10 * 1024 * 1024)
-            throw new InvalidOperationException("Kích thước ảnh vượt quá 10MB.");
+            throw new InvalidOperationException("Image size exceeds 10MB.");
 
         user.ProfilePicture = await _firebaseService.UploadAvatarAsync(avatar.OpenReadStream(), avatar.FileName);
         user.UpdatedAt = DateTime.UtcNow;
@@ -264,7 +264,7 @@ public class BuddyService : IBuddyService
             var firstName = user.FullName?.Split(' ').LastOrDefault() ?? user.FullName ?? "Buddy";
             await _emailSender.SendEmailAsync(
                 user.Email,
-                "Chúc mừng! Bạn đã trở thành Buddy chính thức trên Bonddy",
+                "Congratulations! You have become an official Buddy on Bonddy",
                 EmailTemplates.BuildBuddyApprovedEmailHtml(user.FullName ?? firstName, firstName));
         }
 
