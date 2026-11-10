@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using BonddyPlatform.Services.Implements;
 namespace BonddyPlatform.Services.Implements;
 
 public class PaymentService : IPaymentService
