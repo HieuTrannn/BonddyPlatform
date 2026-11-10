@@ -1,19 +1,52 @@
-name: Deploy to VPS
+name: CI / Deploy
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  deploy:
+  build-test:
+    name: Build & test
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore BonddyPlatform.sln
+
+      - name: Build
+        run: dotnet build BonddyPlatform.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test BonddyPlatform.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+
+  deploy:
+    name: Deploy to VPS
+    # Only after build & tests pass, and only for pushes to main.
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
