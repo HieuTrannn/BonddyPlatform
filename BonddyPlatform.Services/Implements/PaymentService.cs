@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using BonddyPlatform.Services.Implements;
 namespace BonddyPlatform.Services.Implements;
 
 public class PaymentService : IPaymentService
@@ -18,6 +17,7 @@ public class PaymentService : IPaymentService
     private readonly PayPalOptions _payPalOptions;
     private readonly ILogger<PaymentService> _logger;
     private readonly IPayOsService _payOsService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     // Escrow state machine
     private static readonly Dictionary<PaymentStatus, HashSet<PaymentStatus>> _allowedTransitions = new()
@@ -32,12 +32,14 @@ public class PaymentService : IPaymentService
         IUnitOfWork uow,
         IOptions<PayPalOptions> payPalOptions,
         ILogger<PaymentService> logger,
-        IPayOsService payOsService)
+        IPayOsService payOsService,
+        IHttpClientFactory httpClientFactory)
     {
         _uow = uow;
         _payPalOptions = payPalOptions.Value;
         _logger = logger;
         _payOsService = payOsService;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<PaymentResponseDto> CreateAsync(PaymentCreateRequestDto dto)
@@ -142,7 +144,7 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Booking is already paid.");
 
         var accessToken = await GetPayPalAccessTokenAsync();
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -242,7 +244,7 @@ public class PaymentService : IPaymentService
             return ToDto(payment);
 
         var accessToken = await GetPayPalAccessTokenAsync();
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -373,7 +375,7 @@ public class PaymentService : IPaymentService
 
     private async Task<string> GetPayPalAccessTokenAsync()
     {
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_payPalOptions.ClientId}:{_payPalOptions.Secret}"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
@@ -420,7 +422,7 @@ public class PaymentService : IPaymentService
         }
 
         var accessToken = await GetPayPalAccessTokenAsync();
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 

@@ -1,5 +1,5 @@
 using BonddyPlatform.Services.Options;
-using Google.Apis.Auth.OAuth2;
+using BonddyPlatform.Services.Helpers;
 using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Options;
 
@@ -7,50 +7,16 @@ namespace BonddyPlatform.Services.Implements
 {
     public class FirebaseService
     {
-        private readonly StorageClient _storageClient;
+        // Created on first upload so the API can start (and serve other endpoints) without Firebase configured.
+        private readonly Lazy<StorageClient> _storageClient;
         private readonly FirebaseOptions _firebaseOptions;
-        private const string BucketName = "bonddyplatform.firebasestorage.app";
+        private string BucketName => _firebaseOptions.BucketName;
 
         public FirebaseService(IOptions<FirebaseOptions> firebaseOptions)
         {
             _firebaseOptions = firebaseOptions.Value;
 
-            GoogleCredential credential;
-
-            var path = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
-            {
-                credential = GoogleCredential.FromFile(path);
-            }
-            else if (!string.IsNullOrWhiteSpace(_firebaseOptions.CredentialsPath) && File.Exists(_firebaseOptions.CredentialsPath))
-            {
-                credential = GoogleCredential.FromFile(_firebaseOptions.CredentialsPath);
-            }
-            else if (!string.IsNullOrWhiteSpace(_firebaseOptions.CredentialsJson))
-            {
-                var json = _firebaseOptions.CredentialsJson.Trim();
-                if (!json.StartsWith("{"))
-                {
-                    try
-                    {
-                        var decoded = Convert.FromBase64String(json);
-                        json = System.Text.Encoding.UTF8.GetString(decoded);
-                    }
-                    catch
-                    {
-                        throw new InvalidOperationException("Firebase:CredentialsJson must be valid JSON or base64-encoded JSON.");
-                    }
-                }
-
-                credential = GoogleCredential.FromJson(json);
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    "Firebase not configured for Storage. Set GOOGLE_APPLICATION_CREDENTIALS or Firebase:CredentialsPath or Firebase:CredentialsJson in configuration.");
-            }
-
-            _storageClient = StorageClient.Create(credential);
+            _storageClient = new Lazy<StorageClient>(() => StorageClient.Create(FirebaseCredentialLoader.Load(_firebaseOptions)));
         }
 
         public async Task<string> UploadAvatarAsync(Stream imageStream, string fileName)
@@ -69,7 +35,7 @@ namespace BonddyPlatform.Services.Implements
 
                 string contentType = GetContentType(fileName);
 
-                var storageObject = await _storageClient.UploadObjectAsync(
+                var storageObject = await _storageClient.Value.UploadObjectAsync(
                     BucketName,
                     $"avatars/{uniqueFileName}",
                     contentType,
@@ -83,7 +49,7 @@ namespace BonddyPlatform.Services.Implements
                     }
                 };
 
-                await _storageClient.UpdateObjectAsync(storageObject);
+                await _storageClient.Value.UpdateObjectAsync(storageObject);
 
                 return $"https://storage.googleapis.com/{BucketName}/avatars/{uniqueFileName}";
             }

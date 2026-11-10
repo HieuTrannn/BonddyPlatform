@@ -94,7 +94,7 @@ public class AuthController : ApiControllerBase
     {
         var result = await _authService.ForgotPasswordAsync(request);
         if (!result.Success)
-            return BadRequest(ApiResponse.ErrorResponse(result.Message));
+            return BadRequest(ApiResponse.ErrorResponse(result.Message ?? "Forgot password not successful"));
         return Ok(ApiResponse.SuccessResponse(result.Message));
     }
 
