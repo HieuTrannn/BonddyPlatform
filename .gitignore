@@ -37,3 +37,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Secrets - never commit service-account keys or local overrides
+*firebase-adminsdk*.json
+**/Services/*-firebase-*.json
+appsettings.*.local.json

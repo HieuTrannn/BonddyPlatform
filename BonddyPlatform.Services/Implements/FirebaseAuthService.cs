@@ -3,7 +3,7 @@ using BonddyPlatform.Services.Options;
 using FirebaseAdmin;
 using Microsoft.Extensions.Logging;
 using FirebaseAdmin.Auth;
-using Google.Apis.Auth.OAuth2;
+using BonddyPlatform.Services.Helpers;
 using Microsoft.Extensions.Options;
 
 namespace BonddyPlatform.Services.Implements;
@@ -64,37 +64,7 @@ public class FirebaseAuthService : IFirebaseAuthService
             if (_appInitialized)
                 return;
 
-            var path = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
-            {
-                FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromFile(path) });
-            }
-            else if (!string.IsNullOrWhiteSpace(_firebaseOptions.CredentialsPath) && File.Exists(_firebaseOptions.CredentialsPath))
-            {
-                FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromFile(_firebaseOptions.CredentialsPath) });
-            }
-            else if (!string.IsNullOrWhiteSpace(_firebaseOptions.CredentialsJson))
-            {
-                var json = _firebaseOptions.CredentialsJson.Trim();
-                if (!json.StartsWith("{"))
-                {
-                    try
-                    {
-                        var decoded = Convert.FromBase64String(json);
-                        json = System.Text.Encoding.UTF8.GetString(decoded);
-                    }
-                    catch
-                    {
-                        throw new InvalidOperationException("Firebase:CredentialsJson must be valid JSON or base64-encoded JSON.");
-                    }
-                }
-                FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromJson(json) });
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    "Firebase not configured. Set GOOGLE_APPLICATION_CREDENTIALS or Firebase:CredentialsPath or Firebase:CredentialsJson in config.");
-            }
+            FirebaseApp.Create(new AppOptions { Credential = FirebaseCredentialLoader.Load(_firebaseOptions) });
 
             _appInitialized = true;
         }

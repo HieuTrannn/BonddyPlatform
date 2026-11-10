@@ -17,32 +17,55 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Empty env vars (e.g. `KEY=` in .env) must not wipe out defaults.
+string? Env(string key) => string.IsNullOrWhiteSpace(builder.Configuration[key]) ? null : builder.Configuration[key];
+
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
-builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
-builder.Services.Configure<FirebaseOptions>(builder.Configuration.GetSection(FirebaseOptions.SectionName));
+// Secrets are never stored in appsettings*.json: flat env vars (see .env.example) override the sections below.
+builder.Services.Configure<SmtpOptions>(options =>
+{
+    builder.Configuration.GetSection(SmtpOptions.SectionName).Bind(options);
+    options.UserName = Env("SMTP_USERNAME") ?? options.UserName;
+    options.Password = Env("SMTP_PASSWORD") ?? options.Password;
+    options.FromEmail = Env("SMTP_FROM_EMAIL") ?? options.FromEmail;
+});
+builder.Services.Configure<FirebaseOptions>(options =>
+{
+    builder.Configuration.GetSection(FirebaseOptions.SectionName).Bind(options);
+    options.CredentialsJson = Env("FIREBASE_CREDENTIALS_JSON") ?? options.CredentialsJson;
+});
 builder.Services.Configure<PayPalOptions>(options =>
 {
     builder.Configuration.GetSection(PayPalOptions.SectionName).Bind(options);
-    options.BaseUrl = builder.Configuration["PAYPAL_BASE_URL"] ?? options.BaseUrl;
-    options.ClientId = builder.Configuration["PAYPAL_CLIENT_ID"] ?? options.ClientId;
-    options.Secret = builder.Configuration["PAYPAL_SECRET"] ?? options.Secret;
-    options.WebhookId = builder.Configuration["PAYPAL_WEBHOOK_ID"] ?? options.WebhookId;
-    options.ReturnUrl = builder.Configuration["PAYPAL_RETURN_URL"] ?? options.ReturnUrl;
-    options.CancelUrl = builder.Configuration["PAYPAL_CANCEL_URL"] ?? options.CancelUrl;
+    options.BaseUrl = Env("PAYPAL_BASE_URL") ?? options.BaseUrl;
+    options.ClientId = Env("PAYPAL_CLIENT_ID") ?? options.ClientId;
+    options.Secret = Env("PAYPAL_SECRET") ?? options.Secret;
+    options.WebhookId = Env("PAYPAL_WEBHOOK_ID") ?? options.WebhookId;
+    options.ReturnUrl = Env("PAYPAL_RETURN_URL") ?? options.ReturnUrl;
+    options.CancelUrl = Env("PAYPAL_CANCEL_URL") ?? options.CancelUrl;
 });
 builder.Services.Configure<PayOsOptions>(options =>
 {
     builder.Configuration.GetSection(PayOsOptions.SectionName).Bind(options);
-    options.ClientId = builder.Configuration["PAYOS_CLIENT_ID"] ?? options.ClientId;
-    options.ApiKey = builder.Configuration["PAYOS_API_KEY"] ?? options.ApiKey;
-    options.ChecksumKey = builder.Configuration["PAYOS_CHECKSUM_KEY"] ?? options.ChecksumKey;
-    options.ReturnUrl = builder.Configuration["PAYOS_RETURN_URL"] ?? options.ReturnUrl;
-    options.CancelUrl = builder.Configuration["PAYOS_CANCEL_URL"] ?? options.CancelUrl;
+    options.ClientId = Env("PAYOS_CLIENT_ID") ?? options.ClientId;
+    options.ApiKey = Env("PAYOS_API_KEY") ?? options.ApiKey;
+    options.ChecksumKey = Env("PAYOS_CHECKSUM_KEY") ?? options.ChecksumKey;
+    options.ReturnUrl = Env("PAYOS_RETURN_URL") ?? options.ReturnUrl;
+    options.CancelUrl = Env("PAYOS_CANCEL_URL") ?? options.CancelUrl;
 });
 builder.Services.AddHttpClient();
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? new JwtOptions();
+jwtOptions.Secret = Env("JWT_SECRET") ?? jwtOptions.Secret;
+builder.Services.PostConfigure<JwtOptions>(o => o.Secret = jwtOptions.Secret);
+
+// HS256 needs a key of at least 256 bits; fail fast with a clear message instead of a cryptic crypto error.
+if (Encoding.UTF8.GetByteCount(jwtOptions.Secret) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT secret is missing or shorter than 32 bytes. Set the JWT_SECRET (or Jwt__Secret) environment variable.");
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
