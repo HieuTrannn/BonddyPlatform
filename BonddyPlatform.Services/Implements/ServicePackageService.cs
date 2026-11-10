@@ -3,6 +3,7 @@ using BonddyPlatform.Repositories.Models;
 using BonddyPlatform.Services.DTOs.ServicePackageDtos;
 using BonddyPlatform.Services.Interfaces;
 using BonddyPlatform.Services.Options;
+using BonddyPlatform.Services.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,17 +20,20 @@ public class ServicePackageService : IServicePackageService
     private readonly PayPalOptions _payPalOptions;
     private readonly ILogger<ServicePackageService> _logger;
     private readonly IPayOsService _payOsService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public ServicePackageService(
         IUnitOfWork uow,
         IOptions<PayPalOptions> payPalOptions,
         ILogger<ServicePackageService> logger,
-        IPayOsService payOsService)
+        IPayOsService payOsService,
+        IHttpClientFactory httpClientFactory)
     {
         _uow = uow;
         _payPalOptions = payPalOptions.Value;
         _logger = logger;
         _payOsService = payOsService;
+        _httpClientFactory = httpClientFactory;
     }
 
     // ─── Public ──────────────────────────────────────────────────────────────
@@ -231,14 +235,8 @@ public class ServicePackageService : IServicePackageService
     private async Task<object> HandleUpgradeAsync(
         Buddy buddy, BuddySubscription activeSub, ServicePackage oldPkg, ServicePackage newPkg, bool usePayOs = false)
     {
-        // Calculate proration
-        var totalDays = (activeSub.EndDate - activeSub.StartDate).TotalDays;
-        var remainingDays = Math.Max(0, (activeSub.EndDate - DateTime.UtcNow).TotalDays);
-        var ratio = totalDays > 0 ? remainingDays / totalDays : 0;
-
-        var creditFromOld = Math.Round(oldPkg.PricePerMonth * (decimal)ratio, 0);
-        var costForNew = Math.Round(newPkg.PricePerMonth * (decimal)ratio, 0);
-        var proratedCharge = Math.Max(0, costForNew - creditFromOld);
+        var (creditFromOld, costForNew, proratedCharge) = SubscriptionProration.Calculate(
+            oldPkg.PricePerMonth, newPkg.PricePerMonth, activeSub.StartDate, activeSub.EndDate, DateTime.UtcNow);
 
         // Also clear any scheduled downgrade
         if (activeSub.DowngradeToPackageId.HasValue)
@@ -459,7 +457,7 @@ public class ServicePackageService : IServicePackageService
 
         // Capture PayPal order
         var accessToken = await GetPayPalAccessTokenAsync();
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -682,7 +680,7 @@ public class ServicePackageService : IServicePackageService
         Guid referenceId, decimal amount, string currency, string description)
     {
         var accessToken = await GetPayPalAccessTokenAsync();
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -745,7 +743,7 @@ public class ServicePackageService : IServicePackageService
 
     private async Task<string> GetPayPalAccessTokenAsync()
     {
-        using var client = new HttpClient();
+        var client = _httpClientFactory.CreateClient();
         client.BaseAddress = new Uri(_payPalOptions.BaseUrl);
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_payPalOptions.ClientId}:{_payPalOptions.Secret}"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);

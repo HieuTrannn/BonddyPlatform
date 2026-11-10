@@ -5,11 +5,12 @@ using Microsoft.EntityFrameworkCore;
 namespace BonddyPlatform.API.BackgroundJobs;
 
 /// <summary>
-/// Background job chạy định kỳ mỗi 5 phút để tự động cập nhật status:
-/// - Trip (Open/Closed) → Expired khi StartDate+StartTime đã qua.
-/// - Booking (PendingCustomerConfirm/PendingPayment) → Expired khi BookedDate+BookedStartTime đã qua.
-/// - Booking (Confirmed) → InProgress khi BookedDate+BookedStartTime đã tới.
-/// - Booking (InProgress) → Completed khi BookedDate+BookedStartTime+BookedDurationHours đã qua.
+/// Runs every 5 minutes and moves time-driven statuses forward:
+/// - Trip (Open/Closed) → Expired once StartDate+StartTime has passed.
+/// - Booking (PendingCustomerConfirm/PendingPayment) → Expired once BookedDate+BookedStartTime has passed.
+/// - Booking (Confirmed) → InProgress once BookedDate+BookedStartTime is reached.
+/// - Booking (InProgress) → Completed once BookedDate+BookedStartTime+BookedDurationHours has passed.
+/// All times are compared in UTC.
 /// </summary>
 public class StatusExpiryJob : BackgroundService
 {
@@ -30,11 +31,21 @@ public class StatusExpiryJob : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await Task.Delay(Interval, stoppingToken);
-
             try
             {
-                await RunAsync(stoppingToken);
+                await Task.Delay(Interval, stoppingToken);
+
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<BonddyDbContext>();
+                var result = await ApplyTransitionsAsync(db, DateTime.UtcNow, stoppingToken);
+
+                if (result.Total > 0)
+                {
+                    _logger.LogInformation(
+                        "StatusExpiryJob: {Expired} trip(s) expired | {BookingExpired} booking(s) expired | " +
+                        "{Started} booking(s) → InProgress | {Completed} booking(s) → Completed.",
+                        result.TripsExpired, result.BookingsExpired, result.BookingsStarted, result.BookingsCompleted);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -49,16 +60,19 @@ public class StatusExpiryJob : BackgroundService
         _logger.LogInformation("StatusExpiryJob stopped.");
     }
 
-    private async Task RunAsync(CancellationToken ct)
+    public readonly record struct TransitionResult(
+        int TripsExpired, int BookingsExpired, int BookingsStarted, int BookingsCompleted)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BonddyDbContext>();
+        public int Total => TripsExpired + BookingsExpired + BookingsStarted + BookingsCompleted;
+    }
 
-        var now = DateTime.UtcNow;
+    /// <summary>Applies all time-based status transitions as of <paramref name="now"/> (UTC) and saves once.</summary>
+    public static async Task<TransitionResult> ApplyTransitionsAsync(BonddyDbContext db, DateTime now, CancellationToken ct = default)
+    {
         var today = DateOnly.FromDateTime(now);
         var currentTime = TimeOnly.FromDateTime(now);
 
-        // ── 1. Expire Trips ────────────────────────────────────────────────────
+        // 1. Trips whose start time has passed
         var tripsToExpire = await db.Trips
             .Where(t => (t.Status == TripStatus.Open || t.Status == TripStatus.Closed)
                      && (t.StartDate < today
@@ -67,11 +81,11 @@ public class StatusExpiryJob : BackgroundService
 
         foreach (var trip in tripsToExpire)
         {
-            trip.Status    = TripStatus.Expired;
+            trip.Status = TripStatus.Expired;
             trip.UpdatedAt = now;
         }
 
-        // ── 2. Expire Bookings (chưa confirm / chưa thanh toán) ───────────────
+        // 2. Bookings never confirmed/paid before the tour started
         var bookingsToExpire = await db.Bookings
             .Where(b => (b.Status == BookingStatus.PendingCustomerConfirm
                       || b.Status == BookingStatus.PendingPayment)
@@ -81,11 +95,11 @@ public class StatusExpiryJob : BackgroundService
 
         foreach (var booking in bookingsToExpire)
         {
-            booking.Status    = BookingStatus.Expired;
+            booking.Status = BookingStatus.Expired;
             booking.UpdatedAt = now;
         }
 
-        // ── 3. Confirmed → InProgress khi đến giờ đi ──────────────────────────
+        // 3. Confirmed → InProgress when the tour starts
         var bookingsToStart = await db.Bookings
             .Where(b => b.Status == BookingStatus.Confirmed
                      && (b.BookedDate < today
@@ -94,43 +108,31 @@ public class StatusExpiryJob : BackgroundService
 
         foreach (var booking in bookingsToStart)
         {
-            booking.Status    = BookingStatus.InProgress;
+            booking.Status = BookingStatus.InProgress;
             booking.UpdatedAt = now;
         }
 
-        // ── 4. InProgress → Completed khi hết thời gian tour ─────────────────
-        // Thời gian kết thúc = BookedDate+BookedStartTime + BookedDurationHours
+        // 4. InProgress → Completed when start + duration has passed (evaluated in memory: date math is not translatable).
         var bookingsInProgress = await db.Bookings
             .Where(b => b.Status == BookingStatus.InProgress)
             .ToListAsync(ct);
 
         var bookingsToComplete = bookingsInProgress
-            .Where(b =>
-            {
-                // Tính DateTime kết thúc tour (UTC naive — cộng giờ đơn giản)
-                var startDt = b.BookedDate.ToDateTime(b.BookedStartTime);
-                var endDt   = startDt.AddHours(b.BookedDurationHours);
-                return now >= endDt;
-            })
+            .Where(b => now >= b.BookedDate.ToDateTime(b.BookedStartTime).AddHours(b.BookedDurationHours))
             .ToList();
 
         foreach (var booking in bookingsToComplete)
         {
-            booking.Status    = BookingStatus.Completed;
+            booking.Status = BookingStatus.Completed;
             booking.UpdatedAt = now;
         }
 
-        var totalChanged = tripsToExpire.Count + bookingsToExpire.Count
-                         + bookingsToStart.Count + bookingsToComplete.Count;
+        var result = new TransitionResult(
+            tripsToExpire.Count, bookingsToExpire.Count, bookingsToStart.Count, bookingsToComplete.Count);
 
-        if (totalChanged > 0)
-        {
+        if (result.Total > 0)
             await db.SaveChangesAsync(ct);
-            _logger.LogInformation(
-                "StatusExpiryJob: {Expired} trip(s) expired | {BookingExpired} booking(s) expired | " +
-                "{Started} booking(s) → InProgress | {Completed} booking(s) → Completed.",
-                tripsToExpire.Count, bookingsToExpire.Count,
-                bookingsToStart.Count, bookingsToComplete.Count);
-        }
+
+        return result;
     }
 }
