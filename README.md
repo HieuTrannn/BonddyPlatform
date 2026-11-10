@@ -3,6 +3,7 @@
 [![CI / Deploy](https://github.com/HieuTrannn/BonddyPlatform/actions/workflows/deploy.yml/badge.svg)](https://github.com/HieuTrannn/BonddyPlatform/actions/workflows/deploy.yml)
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)
 ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791)
+[![FIP Youth Startup 2025 – Top 10](https://img.shields.io/badge/FIP%20Youth%20Startup%202025-Top%2010-FFD700)](https://drive.google.com/file/d/1kR691GAnZEBqFW_23VC28czJ5IwHHYpX/view?usp=drive_link)
 
 **Bonddy** connects travelers with **local buddies**: residents who show visitors around their city.
 A traveler posts a trip, buddies send requests, the two chat in real time, the buddy makes an offer (a booking),
@@ -13,6 +14,13 @@ This repository is the backend REST + real-time API. It started as the team proj
 
 > **Demo status:** the production server (`bonddy.vn`) is currently **offline**. To try the API, run it
 > locally with Docker Compose (see [Run locally](#run-locally)) and open Swagger.
+
+## 🏆 Achievements
+
+- **Top 10 — FIP Youth Startup 2025**, organized by FPT Innovation Path Club (FIP), FPT University
+  (November 2025), team **Nova**, with Bonddy — a platform connecting travelers with local buddies.
+
+Bonddy started as an EXE101 (Experiential Entrepreneurship) course project and was developed further for the competition.
 
 ## My role
 
