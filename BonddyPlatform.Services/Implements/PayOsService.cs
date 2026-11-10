@@ -192,6 +192,13 @@ public class PayOsService : IPayOsService
     /// </summary>
     public bool VerifyWebhookSignature(Dictionary<string, object> data, string signature)
     {
+        // Without a checksum key anyone could compute HMAC(key: "") and forge a "paid" webhook.
+        if (string.IsNullOrWhiteSpace(_options.ChecksumKey) || string.IsNullOrWhiteSpace(signature))
+        {
+            _logger.LogWarning("PayOS webhook rejected: checksum key not configured or signature missing.");
+            return false;
+        }
+
         // Sort keys alphabetically
         var sortedKeys = data.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
 
@@ -228,12 +235,13 @@ public class PayOsService : IPayOsService
         var dataString = string.Join("&", parts);
         var computedSignature = ComputeHmacSha256(dataString, _options.ChecksumKey);
 
-        var isValid = string.Equals(computedSignature, signature, StringComparison.OrdinalIgnoreCase);
+        // Constant-time comparison to avoid leaking how many leading characters matched.
+        var isValid = CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(computedSignature),
+            Encoding.ASCII.GetBytes(signature.Trim().ToLowerInvariant()));
         if (!isValid)
         {
-            _logger.LogWarning(
-                "PayOS webhook signature mismatch. Data: {DataString}, Expected: {Expected}, Computed: {Computed}",
-                dataString, signature, computedSignature);
+            _logger.LogWarning("PayOS webhook signature mismatch. Data: {DataString}", dataString);
         }
 
         return isValid;
